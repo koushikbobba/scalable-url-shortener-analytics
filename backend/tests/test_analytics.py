@@ -1,7 +1,10 @@
 import pytest
+from datetime import timedelta
+from django.utils import timezone
 from apps.links.models import Link
 from apps.analytics.models import ClickEvent
 from apps.analytics.services import AnalyticsIngestionService, AnalyticsQueryService
+
 
 
 @pytest.mark.django_db
@@ -13,11 +16,12 @@ class TestAnalyticsEngine:
             original_url='https://example.com'
         )
 
+        now = timezone.now()
         raw_events = [
             {
                 "link_id": str(link.id),
                 "short_code": link.short_code,
-                "timestamp": "2026-08-31T12:00:00Z",
+                "timestamp": (now - timedelta(minutes=10)).isoformat(),
                 "ip_hash": "hash_ip_1",
                 "referrer": "https://google.com",
                 "browser": "Chrome 120",
@@ -29,7 +33,7 @@ class TestAnalyticsEngine:
             {
                 "link_id": str(link.id),
                 "short_code": link.short_code,
-                "timestamp": "2026-08-31T12:05:00Z",
+                "timestamp": (now - timedelta(minutes=5)).isoformat(),
                 "ip_hash": "hash_ip_2",
                 "referrer": "Direct",
                 "browser": "Safari 17",
@@ -41,7 +45,7 @@ class TestAnalyticsEngine:
             {
                 "link_id": str(link.id),
                 "short_code": link.short_code,
-                "timestamp": "2026-08-31T12:10:00Z",
+                "timestamp": now.isoformat(),
                 "ip_hash": "hash_ip_1",  # Same visitor
                 "referrer": "https://twitter.com",
                 "browser": "Chrome 120",
@@ -51,6 +55,7 @@ class TestAnalyticsEngine:
                 "city": "New York"
             }
         ]
+
 
         count = AnalyticsIngestionService.process_batch(raw_events)
         assert count == 3

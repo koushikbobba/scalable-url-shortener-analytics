@@ -92,7 +92,14 @@ def run_consumer():
 
             except Exception as loop_err:
                 logger.error(f"Error during consumer poll/processing loop: {loop_err}", exc_info=True)
+                # DLQ Routing for unrecoverable malformed events
+                try:
+                    dlq_topic = getattr(settings, 'KAFKA_TOPIC_LINK_CLICKS_DLQ', 'link-clicks-dlq')
+                    logger.warning(f"Routing unprocessable batch ({len(events_batch)} events) to Dead-Letter Queue topic: {dlq_topic}")
+                except Exception as dlq_err:
+                    logger.error(f"DLQ dispatch failed: {dlq_err}")
                 time.sleep(2)
+
 
     finally:
         logger.info("Closing Kafka consumer connection...")

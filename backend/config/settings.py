@@ -7,11 +7,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 dotenv.load_dotenv(BASE_DIR.parent / '.env')
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-prod-scalable-url-shortener-change-in-production-2026')
+SECRET_KEY = os.getenv('SECRET_KEY') or 'django-insecure-prod-scalable-url-shortener-change-in-production-2026'
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,backend').split(',') if h.strip()]
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',

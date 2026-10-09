@@ -56,8 +56,9 @@ class AnalyticsIngestionService:
 
         try:
             with transaction.atomic():
-                # 1. Bulk insert raw events
-                ClickEvent.objects.bulk_create(click_events_to_create, batch_size=500)
+                # 1. Bulk insert raw events (with conflict handling for idempotent ingestion)
+                ClickEvent.objects.bulk_create(click_events_to_create, batch_size=500, ignore_conflicts=True)
+
 
                 # 2. Atomic increment of click counts on Link objects
                 for link_id, count in link_counts.items():

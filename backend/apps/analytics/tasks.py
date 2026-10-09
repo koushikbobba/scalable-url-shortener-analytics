@@ -62,3 +62,17 @@ def aggregate_daily_metrics_task():
 
     logger.info(f"Aggregated daily metrics for {count} links.")
     return f"Aggregated {count} links"
+
+
+@shared_task(name="apps.analytics.tasks.purge_old_click_events_task")
+def purge_old_click_events_task(retention_days: int = 90):
+    """
+    Periodic task: purges raw ClickEvent rows older than retention threshold (default 90 days),
+    while preserving pre-aggregated DailyLinkMetrics summary rollups.
+    """
+    logger.info(f"Starting raw click event retention pruning (retention_days={retention_days})...")
+    cutoff_date = timezone.now() - timedelta(days=retention_days)
+    deleted_count, _ = ClickEvent.objects.filter(clicked_at__lt=cutoff_date).delete()
+    logger.info(f"Successfully purged {deleted_count} raw click events older than {cutoff_date}.")
+    return f"Purged {deleted_count} events"
+
