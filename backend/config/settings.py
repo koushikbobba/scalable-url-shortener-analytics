@@ -114,9 +114,11 @@ else:
             'PASSWORD': DB_PASSWORD,
             'HOST': DB_HOST,
             'PORT': DB_PORT,
-            'CONN_MAX_AGE': 60,
+            'CONN_MAX_AGE': 60,          # Persistent connection pooling (seconds)
+            'CONN_HEALTH_CHECKS': True,  # Verify stale connections before reuse
             'OPTIONS': {
                 'connect_timeout': 3,
+                'options': '-c statement_timeout=30000',  # 30s query timeout guard
             }
         }
     }

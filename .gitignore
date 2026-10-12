@@ -9,6 +9,8 @@ backend/db.sqlite3-journal
 db.sqlite3
 *.log
 local_settings.py
+backups/
+
 
 # Virtual Environments
 venv/

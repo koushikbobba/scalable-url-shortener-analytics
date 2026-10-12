@@ -1,0 +1,38 @@
+groups:
+  - name: url_shortener_alerts
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "LinkStream service instance is down"
+          description: "Instance {{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
+
+      - alert: HighP99RedirectLatency
+        expr: histogram_quantile(0.99, sum(rate(redirect_latency_seconds_bucket[5m])) by (le)) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P99 redirect latency detected"
+          description: "P99 redirect latency is {{ $value }}s (> 50ms) over the last 5 minutes."
+
+      - alert: HighRedirectErrorRate
+        expr: (sum(rate(redirect_requests_total{status=~"5.."}[5m])) / sum(rate(redirect_requests_total[5m]))) * 100 > 1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx redirect error rate"
+          description: "Redirect 5xx error rate is currently {{ $value }}% (> 1%)."
+
+      - alert: RateLimitSpikeDetected
+        expr: sum(rate(redirect_requests_total{status="rate_limited"}[5m])) > 100
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spike in rate-limited traffic"
+          description: "More than 100 requests/sec are being blocked by sliding-window rate limiting."

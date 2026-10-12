@@ -18,4 +18,13 @@ app.conf.beat_schedule = {
         'task': 'apps.links.tasks.cleanup_expired_cache_task',
         'schedule': crontab(hour=2, minute=0),  # Runs daily at 2:00 AM
     },
+    'purge-old-click-events-weekly': {
+        'task': 'apps.analytics.tasks.purge_old_click_events_task',
+        'schedule': crontab(hour=3, minute=0, day_of_week='sunday'),  # Weekly at 3:00 AM Sunday
+        'kwargs': {'retention_days': 90},
+    },
 }
+
+# Broker connection retry on startup (Celery 6+ compatible)
+app.conf.broker_connection_retry_on_startup = True
+
