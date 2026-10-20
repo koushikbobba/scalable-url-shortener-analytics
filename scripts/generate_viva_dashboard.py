@@ -1,15 +1,12 @@
 """
-Builds an interactive, responsive offline HTML dashboard for the 200 Viva Questions.
-Features:
-- Search filter (real-time by question, answer, topic)
-- Category filter pills
-- Flip card flashcard mode + List view mode
-- Bookmarking / Mastered progress tracking (saved in localStorage)
-- Dark modern glassmorphism UI styled like LinkStream
+Builds an interactive, responsive offline HTML dashboard for LinkStream that includes:
+1. TAB 1: System Architecture & Project Explanation (Flowcharts, workflows, tech stack, data models, latency profile).
+2. TAB 2: Interactive 200 Viva & System Design Interview Questions (Search, category filtering, flashcards, mastery tracking).
 """
 import json
 import re
 from pathlib import Path
+import markdown
 
 SOURCE_FILE = Path(r"C:\Users\bobba\.gemini\antigravity\brain\1de4301c-8872-4455-a1f3-4cd160f61e52\viva_prep_and_project_explanation.md")
 DEST_HTML = Path("viva_interview_dashboard.html")
@@ -35,12 +32,28 @@ def categorize_question(q_num: int, q_text: str) -> str:
 
 def build_data():
     text = SOURCE_FILE.read_text(encoding="utf-8")
+    
+    # 1. Split Part 1 and Part 2
+    q1_idx = text.find("**Q1:")
+    part1_md = text[:q1_idx].strip()
+    part2_md = text[q1_idx:].strip()
+
+    # Clean up broken unicode ASCII boxes from Part 1 before markdown rendering
+    part1_md = re.sub(r'```\s*\n\s*["O].*?```', '', part1_md, flags=re.DOTALL)
+    # Remove initial top headers that duplicate the dashboard header
+    part1_md = re.sub(r'^#\s*LinkStream.*?\n', '', part1_md)
+    part1_md = re.sub(r'^#\s*PART 1:.*?\n', '', part1_md, flags=re.MULTILINE)
+
+    # Convert Part 1 to clean HTML
+    part1_html = markdown.markdown(part1_md, extensions=['extra', 'tables', 'fenced_code'])
+
+    # 2. Parse 200 Questions
     pattern = re.compile(
         r"\*\*Q(\d+):\s*(.*?)\*\*\s*\n\s*\*\*Answer:\*\*\s*(.*?)(?=\n\s*\*\*Q\d+:|\Z)",
         re.DOTALL
     )
     items = []
-    for match in pattern.finditer(text):
+    for match in pattern.finditer(part2_md):
         q_num = int(match.group(1))
         question = match.group(2).strip()
         answer = match.group(3).strip()
@@ -63,10 +76,11 @@ def build_data():
             "answer": formatted_a,
             "category": category
         })
-    return items
+        
+    return part1_html, items
 
 def generate_html():
-    items = build_data()
+    part1_html, items = build_data()
     items_json = json.dumps(items)
     categories = sorted(list(set(x["category"] for x in items)))
     
@@ -75,9 +89,11 @@ def generate_html():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LinkStream — 200 Viva & System Design Interview Master Dashboard</title>
+  <title>LinkStream — System Architecture &amp; 200 Viva Prep Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});</script>
   <style>
     :root {{
       --bg: #090d16;
@@ -91,7 +107,7 @@ def generate_html():
       --text-muted: #9ca3af;
       --pill-bg: rgba(255, 255, 255, 0.05);
       --pill-border: rgba(255, 255, 255, 0.1);
-      --code-bg: rgba(0, 0, 0, 0.4);
+      --code-bg: rgba(0, 0, 0, 0.45);
     }}
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
@@ -109,9 +125,9 @@ def generate_html():
       top: 0;
       z-index: 50;
       backdrop-filter: blur(16px);
-      background: rgba(9, 13, 22, 0.85);
+      background: rgba(9, 13, 22, 0.88);
       border-bottom: 1px solid var(--card-border);
-      padding: 18px 32px;
+      padding: 16px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -124,8 +140,8 @@ def generate_html():
       gap: 14px;
     }}
     .brand-logo {{
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       border-radius: 10px;
       background: linear-gradient(135deg, #2563eb, #10b981);
       display: flex;
@@ -137,13 +153,42 @@ def generate_html():
       box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
     }}
     .brand h1 {{
-      font-size: 1.25rem;
+      font-size: 1.22rem;
       font-weight: 700;
       letter-spacing: -0.02em;
     }}
     .brand p {{
       font-size: 0.8rem;
       color: var(--text-muted);
+    }}
+    .nav-tabs {{
+      display: flex;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }}
+    .tab-btn {{
+      padding: 10px 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+    .tab-btn:hover {{
+      color: #fff;
+    }}
+    .tab-btn.active {{
+      background: #2563eb;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
     }}
     .stats-bar {{
       display: flex;
@@ -167,6 +212,109 @@ def generate_html():
       max-width: 1300px;
       margin: 0 auto;
       padding: 32px 24px;
+    }}
+
+    /* Architecture View Tab Styles */
+    .arch-view {{
+      display: block;
+    }}
+    .arch-grid {{
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }}
+    .arch-card {{
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    }}
+    .arch-card h2 {{
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+    .arch-card h3 {{
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f3f4f6;
+      margin: 18px 0 10px 0;
+    }}
+    .arch-card p {{
+      color: #d1d5db;
+      line-height: 1.7;
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }}
+    .arch-card ul, .arch-card ol {{
+      margin-left: 20px;
+      margin-bottom: 16px;
+      color: #d1d5db;
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }}
+    .arch-card li {{
+      margin-bottom: 6px;
+    }}
+    .arch-card table {{
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }}
+    .arch-card th, .arch-card td {{
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: left;
+    }}
+    .arch-card th {{
+      background: rgba(255, 255, 255, 0.06);
+      color: #93c5fd;
+      font-weight: 600;
+    }}
+    .arch-card pre {{
+      background: var(--code-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      color: #a5f3fc;
+      margin: 14px 0;
+    }}
+    .arch-card code {{
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--code-bg);
+      color: #93c5fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }}
+    .mermaid-box {{
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      margin: 16px 0;
+    }}
+
+    /* Controls & Questions Tab Styles */
+    .questions-view {{
+      display: none;
     }}
     .controls {{
       display: flex;
@@ -260,8 +408,6 @@ def generate_html():
       color: #fff;
       box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
     }}
-    
-    /* List View Cards */
     .qa-grid {{
       display: grid;
       grid-template-columns: 1fr;
@@ -312,8 +458,8 @@ def generate_html():
       border: none;
       color: var(--text-muted);
       cursor: pointer;
-      font-size: 1.1rem;
-      padding: 4px 8px;
+      font-size: 0.9rem;
+      padding: 4px 10px;
       border-radius: 6px;
       transition: all 0.15s ease;
     }}
@@ -323,6 +469,7 @@ def generate_html():
     }}
     .action-btn.active {{
       color: #10b981;
+      font-weight: 600;
     }}
     .qa-question {{
       font-size: 1.05rem;
@@ -351,9 +498,6 @@ def generate_html():
       border-radius: 4px;
       font-size: 0.88em;
       border: 1px solid rgba(255, 255, 255, 0.08);
-    }}
-    .qa-answer strong {{
-      color: #f9fafb;
     }}
 
     /* Flashcard Mode */
@@ -434,13 +578,13 @@ def generate_html():
       margin-bottom: 8px;
     }}
 
-    @media (max-width: 768px) {{
+    @media (max-width: 900px) {{
+      .arch-grid {{ grid-template-columns: 1fr; }}
       header {{ padding: 14px 18px; }}
       .container {{ padding: 20px 14px; }}
       .brand h1 {{ font-size: 1.05rem; }}
       .stats-bar {{ display: none; }}
       .qa-card {{ padding: 18px; }}
-      .qa-question {{ font-size: 0.98rem; }}
     }}
   </style>
 </head>
@@ -450,70 +594,139 @@ def generate_html():
   <div class="brand">
     <div class="brand-logo">LS</div>
     <div>
-      <h1>LinkStream Interview Viva Prep</h1>
-      <p>Interactive Study Dashboard &amp; 200 Questions Master Hub</p>
+      <h1>LinkStream Architecture &amp; Viva Prep</h1>
+      <p>Interactive System Architecture &amp; 200 Questions Master Hub</p>
     </div>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" id="tab-arch-btn" onclick="switchMainTab('arch')">🏗️ Architecture &amp; System Design</button>
+    <button class="tab-btn" id="tab-questions-btn" onclick="switchMainTab('questions')">💬 200 Viva Questions &amp; Flashcards</button>
   </div>
 
   <div class="stats-bar">
     <div class="stat-badge">
-      <span>Total Questions:</span>
-      <strong id="stat-total">200</strong>
-    </div>
-    <div class="stat-badge">
-      <span>Showing:</span>
-      <strong id="stat-showing">200</strong>
+      <span>Total Qs:</span>
+      <strong>200</strong>
     </div>
     <div class="stat-badge">
       <span>Mastered:</span>
-      <strong id="stat-mastered" style="color: #34d399;">0</strong>
+      <strong id="stat-mastered" style="color: #34d399;">0 / 200</strong>
     </div>
   </div>
 </header>
 
 <div class="container">
-  <div class="controls">
-    <div class="search-row">
-      <div class="search-input-wrapper">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="search-input" placeholder="Search questions, keywords (e.g. 'Kafka', 'Redis', '302', 'Cache Stampede')...">
+
+  <!-- ================= TAB 1: ARCHITECTURE & SYSTEM DESIGN ================= -->
+  <div class="arch-view" id="main-arch-tab">
+    
+    <!-- Visual Architecture Diagram Card -->
+    <div class="arch-card">
+      <h2>🏗️ Distributed System Architecture &amp; Data Pipeline</h2>
+      <p>High-level view of the decoupled, event-driven architecture that separates the <strong>sub-10ms redirection critical path</strong> from heavy analytical database writes:</p>
+      
+      <div class="mermaid-box">
+        <pre class="mermaid">
+flowchart TD
+    Client["Client / Web Browser"] -->|"GET /{{short_code}}"| Nginx["Nginx Reverse Proxy :80"]
+    Nginx --> Gunicorn["Django API Cluster :8000"]
+    
+    subgraph CriticalPath ["Sub-10ms Redirection Critical Path"]
+        Gunicorn -->|"1. Cache-Aside Read"| Redis[("Redis 7.2 Cluster")]
+        Redis -.->|"Hit: Return Original URL"| Gunicorn
+        Gunicorn -.->|"Miss: Query DB & Populate TTL"| Postgres[("PostgreSQL 16")]
+        Gunicorn -->|"HTTP 302 Found"| Client
+    end
+
+    subgraph AsyncPipeline ["Asynchronous Telemetry & Analytics Pipeline"]
+        Gunicorn -->|"2. Fire & Forget Publish"| KafkaProducer["ClickEventProducer"]
+        KafkaProducer -->|"Partitioned by link_id"| Kafka[("Kafka Broker :9092\nTopic: link-clicks")]
+        KafkaProducer -.->|"Offline Fallback"| MemSpool["In-Memory Ring Spool\n(10,000 capacity)"]
+        
+        Kafka -->|"Batch Poll (500 events)"| Consumer["Kafka Ingestion Consumer"]
+        Consumer -->|"bulk_create(ignore_conflicts=True)"| Postgres
+        Consumer -.->|"Malformed Payload"| DLQ[("Dead-Letter Queue\nlink-clicks-dlq")]
+        
+        Celery["Celery Beat Scheduler"] -->|"Hourly Rollups"| AggTask["aggregate_daily_metrics_task"]
+        Celery -->|"90-Day Retention Prune"| PurgeTask["purge_old_click_events_task"]
+        AggTask --> Postgres
+    end
+
+    subgraph Observability ["Telemetry & Metrics"]
+        Gunicorn -->|"/metrics"| Prometheus[("Prometheus Scraper")]
+        Prometheus --> Grafana["Grafana Dashboards"]
+        Prometheus --> AlertRules["alerts.yml Rules\n(P99 > 50ms, 5xx > 1%)"]
+    end
+        </pre>
       </div>
-      <div class="view-toggle">
-        <button class="view-btn active" id="btn-list-view" onclick="setViewMode('list')">📋 List View</button>
-        <button class="view-btn" id="btn-card-view" onclick="setViewMode('card')">🎴 Flashcard Mode</button>
+    </div>
+
+    <!-- Full Rendered System Explanation from Part 1 -->
+    <div class="arch-card">
+      <h2>📖 Comprehensive Project Explanation &amp; Specifications</h2>
+      <div class="arch-content">
+        {part1_html}
       </div>
     </div>
 
-    <div class="category-pills" id="category-pills">
-      <button class="pill active" onclick="setCategory('all')">All (200)</button>
-      {' '.join([f'<button class="pill" onclick="setCategory(\'{c}\')">{c}</button>' for c in categories])}
+  </div>
+
+  <!-- ================= TAB 2: 200 VIVA QUESTIONS ================= -->
+  <div class="questions-view" id="main-questions-tab">
+    <div class="controls">
+      <div class="search-row">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Search 200 questions, keywords (e.g. 'Kafka', 'Redis', '302', 'Cache Stampede', 'P99')...">
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn active" id="btn-list-view" onclick="setViewMode('list')">📋 List View</button>
+          <button class="view-btn" id="btn-card-view" onclick="setViewMode('card')">🎴 Flashcard Mode</button>
+        </div>
+      </div>
+
+      <div class="category-pills" id="category-pills">
+        <button class="pill active" onclick="setCategory('all')">All (200)</button>
+        {' '.join([f'<button class="pill" onclick="setCategory(\'{{c}}\')">{{c}}</button>' for c in categories])}
+      </div>
+    </div>
+
+    <!-- List View -->
+    <div class="qa-grid" id="qa-grid"></div>
+
+    <!-- Flashcard Mode View -->
+    <div class="flashcard-container" id="flashcard-container">
+      <div class="fc-card" id="fc-card" onclick="flipCard()">
+        <div class="card-badge" id="fc-badge" style="position: absolute; top: 20px; left: 24px;">Category</div>
+        <div class="fc-content" id="fc-content">Question goes here</div>
+        <div class="fc-hint" id="fc-hint">Click card to reveal answer</div>
+      </div>
+      <div class="fc-nav">
+        <button class="fc-btn" onclick="prevCard()">← Previous</button>
+        <span class="fc-counter" id="fc-counter">1 / 200</span>
+        <button class="fc-btn" onclick="nextCard()">Next →</button>
+      </div>
+    </div>
+
+    <div class="empty-state" id="empty-state" style="display: none;">
+      <h3>No matching interview questions found</h3>
+      <p>Try searching for a different keyword or resetting your category filter.</p>
     </div>
   </div>
 
-  <!-- List View -->
-  <div class="qa-grid" id="qa-grid"></div>
-
-  <!-- Flashcard Mode View -->
-  <div class="flashcard-container" id="flashcard-container">
-    <div class="fc-card" id="fc-card" onclick="flipCard()">
-      <div class="card-badge" id="fc-badge" style="position: absolute; top: 20px; left: 24px;">Category</div>
-      <div class="fc-content" id="fc-content">Question goes here</div>
-      <div class="fc-hint" id="fc-hint">Click card to reveal answer</div>
-    </div>
-    <div class="fc-nav">
-      <button class="fc-btn" onclick="prevCard()">← Previous</button>
-      <span class="fc-counter" id="fc-counter">1 / 200</span>
-      <button class="fc-btn" onclick="nextCard()">Next →</button>
-    </div>
-  </div>
-
-  <div class="empty-state" id="empty-state" style="display: none;">
-    <h3>No matching interview questions found</h3>
-    <p>Try searching for a different keyword or resetting your category filter.</p>
-  </div>
 </div>
 
 <script>
+  // Tab Switching
+  function switchMainTab(tab) {{
+    const isArch = tab === 'arch';
+    document.getElementById('main-arch-tab').style.display = isArch ? 'block' : 'none';
+    document.getElementById('main-questions-tab').style.display = isArch ? 'none' : 'block';
+    document.getElementById('tab-arch-btn').classList.toggle('active', isArch);
+    document.getElementById('tab-questions-btn').classList.toggle('active', !isArch);
+  }}
+
   const ALL_QUESTIONS = {items_json};
   let currentCategory = 'all';
   let searchQuery = '';
@@ -522,7 +735,6 @@ def generate_html():
   let flashcardIndex = 0;
   let flashcardFlipped = false;
   
-  // LocalStorage mastered set
   let masteredSet = new Set(JSON.parse(localStorage.getItem('linkstream_mastered_qa') || '[]'));
 
   function updateMasteredUI() {{
@@ -552,8 +764,6 @@ def generate_html():
         (`q${{item.id}}`).includes(q);
       return matchesCategory && matchesSearch;
     }});
-
-    document.getElementById('stat-showing').textContent = filteredItems.length;
 
     if (currentView === 'list') {{
       renderList();
@@ -671,7 +881,7 @@ def generate_html():
 
   // Keyboard navigation for flashcards
   document.addEventListener('keydown', (e) => {{
-    if (currentView === 'card') {{
+    if (currentView === 'card' && document.getElementById('main-questions-tab').style.display !== 'none') {{
       if (e.code === 'Space') {{
         e.preventDefault();
         flipCard();
@@ -697,7 +907,7 @@ def generate_html():
 </html>
 """
     DEST_HTML.write_text(html_content, encoding="utf-8")
-    print(f"Generated standalone Viva Dashboard at: {DEST_HTML.resolve()}")
+    print(f"Generated standalone Dashboard with Architecture at: {DEST_HTML.resolve()}")
 
 if __name__ == "__main__":
     generate_html()
