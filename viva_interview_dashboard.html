@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkStream — 200 Viva & System Design Interview Master Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(18, 24, 38, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(255, 255, 255, 0.14);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.25);
+      --accent: #10b981;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --pill-bg: rgba(255, 255, 255, 0.05);
+      --pill-border: rgba(255, 255, 255, 0.1);
+      --code-bg: rgba(0, 0, 0, 0.4);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 15% 15%, rgba(37, 99, 235, 0.12), transparent 45%),
+                  radial-gradient(circle at 85% 85%, rgba(16, 185, 129, 0.08), transparent 45%),
+                  var(--bg);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(9, 13, 22, 0.85);
+      border-bottom: 1px solid var(--card-border);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb, #10b981);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
+    }
+    .brand h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 8px 16px;
+      border-radius: 100px;
+      border: 1px solid var(--card-border);
+      font-size: 0.85rem;
+    }
+    .stat-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .stat-badge strong {
+      color: #60a5fa;
+    }
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .search-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .search-input-wrapper {
+      position: relative;
+      flex: 1;
+      min-width: 280px;
+    }
+    .search-input-wrapper input {
+      width: 100%;
+      background: rgba(18, 24, 38, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px 18px 14px 44px;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .search-input-wrapper input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .view-toggle {
+      display: flex;
+      background: rgba(18, 24, 38, 0.9);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .view-btn {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .view-btn.active {
+      background: #2563eb;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+    }
+    .category-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pill {
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .pill:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      color: #fff;
+    }
+    .pill.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* List View Cards */
+    .qa-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .qa-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 22px 26px;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .qa-card:hover {
+      border-color: var(--card-hover);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    .qa-card.mastered {
+      border-left: 4px solid var(--accent);
+      background: rgba(16, 185, 129, 0.05);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+    .card-badge {
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .action-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .action-btn.active {
+      color: #10b981;
+    }
+    .qa-question {
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.45;
+      color: #ffffff;
+      margin-bottom: 14px;
+    }
+    .qa-question .q-num {
+      color: #60a5fa;
+      margin-right: 8px;
+      font-weight: 700;
+    }
+    .qa-answer {
+      font-size: 0.95rem;
+      line-height: 1.65;
+      color: #d1d5db;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .qa-answer code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--code-bg);
+      color: #93c5fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.88em;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .qa-answer strong {
+      color: #f9fafb;
+    }
+
+    /* Flashcard Mode */
+    .flashcard-container {
+      display: none;
+      max-width: 800px;
+      margin: 40px auto;
+      text-align: center;
+    }
+    .fc-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 48px 36px;
+      min-height: 380px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s ease, border-color 0.3s ease;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+    .fc-card:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+    }
+    .fc-hint {
+      position: absolute;
+      bottom: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .fc-content {
+      font-size: 1.25rem;
+      line-height: 1.6;
+    }
+    .fc-nav {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .fc-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .fc-btn:hover {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+    .fc-counter {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      min-width: 90px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state h3 {
+      font-size: 1.2rem;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 768px) {
+      header { padding: 14px 18px; }
+      .container { padding: 20px 14px; }
+      .brand h1 { font-size: 1.05rem; }
+      .stats-bar { display: none; }
+      .qa-card { padding: 18px; }
+      .qa-question { font-size: 0.98rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-logo">LS</div>
+    <div>
+      <h1>LinkStream Interview Viva Prep</h1>
+      <p>Interactive Study Dashboard &amp; 200 Questions Master Hub</p>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-badge">
+      <span>Total Questions:</span>
+      <strong id="stat-total">200</strong>
+    </div>
+    <div class="stat-badge">
+      <span>Showing:</span>
+      <strong id="stat-showing">200</strong>
+    </div>
+    <div class="stat-badge">
+      <span>Mastered:</span>
+      <strong id="stat-mastered" style="color: #34d399;">0</strong>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="controls">
+    <div class="search-row">
+      <div class="search-input-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search questions, keywords (e.g. 'Kafka', 'Redis', '302', 'Cache Stampede')...">
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btn-list-view" onclick="setViewMode('list')">📋 List View</button>
+        <button class="view-btn" id="btn-card-view" onclick="setViewMode('card')">🎴 Flashcard Mode</button>
+      </div>
+    </div>
+
+    <div class="category-pills" id="category-pills">
+      <button class="pill active" onclick="setCategory('all')">All (200)</button>
+      <button class="pill" onclick="setCategory('Core URL Engine')">Core URL Engine</button> <button class="pill" onclick="setCategory('Database & Analytics')">Database & Analytics</button> <button class="pill" onclick="setCategory('General Architecture')">General Architecture</button> <button class="pill" onclick="setCategory('Kafka Pipeline')">Kafka Pipeline</button> <button class="pill" onclick="setCategory('Monitoring & DevOps')">Monitoring & DevOps</button> <button class="pill" onclick="setCategory('Redis & Caching')">Redis & Caching</button> <button class="pill" onclick="setCategory('Security & Rate Limiting')">Security & Rate Limiting</button> <button class="pill" onclick="setCategory('System Design & Scale')">System Design & Scale</button>
+    </div>
+  </div>
+
+  <!-- List View -->
+  <div class="qa-grid" id="qa-grid"></div>
+
+  <!-- Flashcard Mode View -->
+  <div class="flashcard-container" id="flashcard-container">
+    <div class="fc-card" id="fc-card" onclick="flipCard()">
+      <div class="card-badge" id="fc-badge" style="position: absolute; top: 20px; left: 24px;">Category</div>
+      <div class="fc-content" id="fc-content">Question goes here</div>
+      <div class="fc-hint" id="fc-hint">Click card to reveal answer</div>
+    </div>
+    <div class="fc-nav">
+      <button class="fc-btn" onclick="prevCard()">← Previous</button>
+      <span class="fc-counter" id="fc-counter">1 / 200</span>
+      <button class="fc-btn" onclick="nextCard()">Next →</button>
+    </div>
+  </div>
+
+  <div class="empty-state" id="empty-state" style="display: none;">
+    <h3>No matching interview questions found</h3>
+    <p>Try searching for a different keyword or resetting your category filter.</p>
+  </div>
+</div>
+
+<script>
+  const ALL_QUESTIONS = [{"id": 1, "question": "What is LinkStream, and what core problem does it solve?", "answer": "LinkStream is a scalable, event-driven URL shortener and link analytics platform. It solves the performance bottleneck of traditional shorteners by decoupling high-speed HTTP redirection (sub-10ms) from synchronous analytics database writes using Redis caching and Apache Kafka streaming.", "category": "General Architecture"}, {"id": 2, "question": "What is the primary technology stack used in the backend?", "answer": "Python 3.11, Django REST Framework 5.0, PostgreSQL 16, Redis 7.2, Apache Kafka 3.7 (KRaft mode), Celery 5.3, Gunicorn, and Docker Compose.", "category": "General Architecture"}, {"id": 3, "question": "How does the system achieve sub-10ms URL redirection?", "answer": "By utilizing a Redis Cache-Aside pattern. When a request hits <code>GET /{short_code}</code>, the application checks Redis first. If found (Cache Hit), it returns an immediate <code>302 Found</code> redirect without querying PostgreSQL.", "category": "Core URL Engine"}, {"id": 4, "question": "Why does the redirect endpoint return an HTTP `302 Found` status code instead of HTTP `301 Moved Permanently`?", "answer": "HTTP 301 is cached permanently by client browsers, preventing subsequent clicks from reaching our server. HTTP 302 forces the browser to hit our server on every click, allowing us to accurately track real-time analytics.", "category": "Core URL Engine"}, {"id": 5, "question": "What happens if a user requests a short URL that does not exist?", "answer": "The system returns an HTTP <code>404 Not Found</code> JSON error response. To prevent Cache Penetration attacks, the system caches a short-lived negative result (<code>{\"not_found\": True}</code>) in Redis for 60 seconds.", "category": "General Architecture"}, {"id": 6, "question": "You mentioned Cache Penetration. What is the difference between Cache Penetration, Cache Avalanche, and Cache Stampede?", "answer": "- <strong>Cache Penetration:</strong> Requests for non-existent keys bypass the cache and repeatedly hit the DB. Solved by negative caching or Bloom Filters.<br>&bull; <strong>Cache Avalanche:</strong> Many cached keys expire simultaneously, causing a massive surge of DB queries. Solved by adding random jitter to TTLs.<br>&bull; <strong>Cache Stampede (Thundering Herd):</strong> High concurrency requests hit a single expired key concurrently, causing multiple workers to compute the same DB query. Solved by distributed locks (<code>SET NX</code>).", "category": "Redis & Caching"}, {"id": 7, "question": "How does your system specifically prevent Cache Stampedes?", "answer": "In <code>LinkService.get_destination()</code>, when a cache miss occurs for a popular short code, workers attempt to acquire a short-lived Redis lock (<code>ratelimit:lock:{short_code}</code>). Only the worker that acquires the lock queries PostgreSQL and populates the cache; other workers wait 50ms and retry Redis.", "category": "Redis & Caching"}, {"id": 8, "question": "What algorithm is used to generate short codes in LinkStream?", "answer": "Base62 encoding using characters <code>[0-9a-zA-Z]</code>.", "category": "Core URL Engine"}, {"id": 9, "question": "Why did you choose a length of 7 characters for auto-generated short codes?", "answer": "A Base62 string of length 7 provides $62^7 = 3,521,614,606,208$ (~3.52 Trillion) unique combinations. Even at 1,000 links per second, it would take over 110 years to exhaust the keyspace.", "category": "Core URL Engine"}, {"id": 10, "question": "How does the system handle short code collisions when two users create links simultaneously?", "answer": "The database column <code>short_code</code> has a <code>UNIQUE</code> constraint index. In <code>LinkService.create_link()</code>, the operation is wrapped in a <code>transaction.atomic()</code> block. If concurrent generation produces a duplicate code, an <code>IntegrityError</code> is caught, triggering an automatic retry with fresh random entropy.", "category": "Core URL Engine"}, {"id": 11, "question": "What is a custom alias, and how is it validated?", "answer": "A custom alias allows users to specify their own short code (e.g., <code>link.io/my-portfolio</code>). It is validated via regex <code>^[a-zA-Z0-9_-]+$</code>, checked against reserved keywords, verified for length (3\u201364 chars), and checked for uniqueness in PostgreSQL.", "category": "Core URL Engine"}, {"id": 12, "question": "What reserved keywords are protected from custom alias creation?", "answer": "Routes such as <code>admin</code>, <code>api</code>, <code>health</code>, <code>metrics</code>, <code>swagger</code>, <code>docs</code>, <code>login</code>, <code>register</code>, <code>static</code>, and <code>media</code>.", "category": "Core URL Engine"}, {"id": 13, "question": "How does the system handle link expiration?", "answer": "The <code>Link</code> model includes an <code>expires_at</code> timestamp. The redirect view checks if <code>expires_at</code> is present and if <code>timezone.now() > expires_at</code>. If expired, it returns HTTP <code>410 Gone</code>. A Celery Beat task also periodically purges expired Redis keys.", "category": "General Architecture"}, {"id": 14, "question": "How does the system handle disabled links?", "answer": "The <code>Link</code> model has an <code>is_active</code> boolean field. If <code>is_active=False</code>, <code>RedirectShortCodeView</code> returns HTTP <code>404 Not Found</code> with a message stating the link was disabled by the owner.", "category": "General Architecture"}, {"id": 15, "question": "Why did you use Apache Kafka instead of RabbitMQ or Celery for click analytics?", "answer": "Click analytics are high-volume, log-append time-series events. Kafka supports persistent, disk-backed topic partitions, consumer group offset tracking, and event replayability. RabbitMQ and Celery are task queues designed for message destruction upon task acknowledgment.", "category": "Kafka Pipeline"}, {"id": 16, "question": "Kafka guarantees At-Least-Once delivery. How do you handle duplicate click events in your consumer?", "answer": "We achieve idempotency in the consumer by assigning a unique signature <code>(link_id, ip_hash, rounded_minute_timestamp)</code> to each event or performing bulk insertion using <code>ON CONFLICT (link_id, ip_hash, clicked_at) DO NOTHING</code> in PostgreSQL.", "category": "Kafka Pipeline"}, {"id": 17, "question": "What is KRaft mode in Kafka 3.7, and why is it used instead of Zookeeper?", "answer": "KRaft (Kafka Raft Metadata mode) manages Kafka cluster metadata internally using an event-driven consensus protocol. It eliminates the operational overhead, memory consumption, and latency of running an external Apache Zookeeper cluster.", "category": "Kafka Pipeline"}, {"id": 18, "question": "What is consumer lag in Kafka, and why is it an important metric?", "answer": "Consumer lag is the delta between the latest offset published to a Kafka topic partition and the offset currently processed by the consumer group. High consumer lag indicates that consumer workers are falling behind input traffic.", "category": "Kafka Pipeline"}, {"id": 19, "question": "How are click events batch-processed into PostgreSQL?", "answer": "The standalone Python consumer (<code>kafka_pipeline/consumer.py</code>) polls Kafka for up to 500 records. It parses the events, constructs a list of <code>ClickEvent</code> model instances, and executes <code>ClickEvent.objects.bulk_create(batch, batch_size=500)</code> inside a single atomic transaction.", "category": "Database & Analytics"}, {"id": 20, "question": "How are total click counts updated on the `Link` model during batch ingestion?", "answer": "Rather than executing separate <code>UPDATE</code> queries, the consumer aggregates click counts per <code>link_id</code> in a Python <code>Counter</code> and executes atomic SQL counter increments using <code>Link.objects.filter(id=link_id).update(click_count=F('click_count') + count)</code>.", "category": "General Architecture"}, {"id": 21, "question": "What is the purpose of Django's `F()` expressions in `update(click_count=F('click_count') + count)`?", "answer": "<code>F()</code> expressions perform database-level atomic operations directly in SQL (<code>UPDATE links SET click_count = click_count + N</code>) without pulling model instances into Python memory, avoiding race conditions under concurrent updates.", "category": "General Architecture"}, {"id": 22, "question": "How does LinkStream ensure GDPR compliance regarding client IP addresses?", "answer": "Client IP addresses are never stored in raw text. <code>hash_ip()</code> computes a salted SHA-256 hash (<code>sha256(ip + salt)[:32]</code>). This allows exact distinct count unique visitor calculations (<code>COUNT(DISTINCT ip_hash)</code>) without storing Personally Identifiable Information (PII).", "category": "General Architecture"}, {"id": 23, "question": "How does the system extract GeoIP location data from incoming requests?", "answer": "<code>extract_geo_location()</code> checks CDN headers (<code>HTTP_CF_IPCOUNTRY</code>, <code>HTTP_X_GEO_COUNTRY</code>, <code>HTTP_CF_IPCITY</code>) injected by Cloudflare/AWS ALB. If headers are absent, it defaults to <code>'US'</code> and <code>'Unknown'</code>.", "category": "General Architecture"}, {"id": 24, "question": "How does User-Agent parsing work?", "answer": "<code>parse_user_agent_details()</code> uses <code>ua-parser</code> / <code>user-agents</code> to parse the raw <code>HTTP_USER_AGENT</code> string into structured device type (<code>Desktop</code>, <code>Mobile</code>, <code>Tablet</code>, <code>Bot</code>), OS family, and browser name.", "category": "General Architecture"}, {"id": 25, "question": "What is Server-Side Request Forgery (SSRF), and how does LinkStream prevent it?", "answer": "SSRF occurs when an attacker submits a URL that causes the server to issue HTTP requests to internal networks. <code>is_ssrf_safe_url()</code> validates that the protocol is strictly <code>http</code> or <code>https</code> and rejects local loopback (<code>127.0.0.1</code>), private RFC1918 subnets (<code>10.0.0.0/8</code>, <code>192.168.0.0/16</code>), and cloud metadata IP addresses (<code>169.254.169.254</code>).", "category": "General Architecture"}, {"id": 26, "question": "Why is 169.254.169.254 specifically dangerous in cloud environments?", "answer": "<code>169.254.169.254</code> is the Link-Local address for Instance Metadata Services in AWS, GCP, and Azure. An un-sanitized SSRF vulnerability could allow an attacker to query <code>/latest/meta-data/iam/security-credentials/</code> and steal AWS IAM role access keys.", "category": "General Architecture"}, {"id": 27, "question": "How does your rate limiter prevent Denial of Service (DoS) attacks?", "answer": "<code>SlidingWindowRateLimiter</code> uses a Redis Sorted Set (<code>ZSET</code>) to enforce request quotas (30 req/min for anonymous users, 120 req/min for authenticated users). If quota is exceeded, HTTP 429 is returned.", "category": "Security & Rate Limiting"}, {"id": 28, "question": "How does the Redis ZSET sliding window algorithm work step-by-step?", "answer": "1. Key format: <code>ratelimit:{action}:{identifier}</code>.<br>2. <code>ZREMRANGEBYSCORE</code> removes timestamps older than <code>(now - 60s)</code>.<br>3. <code>ZCARD</code> counts remaining members in the rolling window.<br>4. If count $\\ge$ limit, request is rejected.<br>5. Else, <code>ZADD</code> current Unix timestamp with a unique member ID and set key TTL to 65s.", "category": "Redis & Caching"}, {"id": 29, "question": "What happens to rate limiting if Redis crashes?", "answer": "<code>SlidingWindowRateLimiter</code> catches Redis connection exceptions and fails open gracefully (or switches to an in-memory sliding window dictionary fallback), logging a warning while ensuring service uptime.", "category": "Redis & Caching"}, {"id": 30, "question": "What custom middleware classes are implemented in LinkStream?", "answer": "1. <code>RequestMetricsMiddleware</code>: Injects a unique <code>X-Request-ID</code> header, measures request execution duration, and records metrics to Prometheus histograms.<br>2. <code>RateLimitMiddleware</code>: Intercepts incoming HTTP requests to evaluate rate limits before reaching API views.", "category": "General Architecture"}, {"id": 31, "question": "What database indexes are created on the `Link` model?", "answer": "- <code>short_code</code>: Unique B-Tree index for $O(\\log N)$ redirect lookups.<br>&bull; <code>(user_id, -created_at)</code>: Composite index for paginated user dashboard queries.<br>&bull; <code>(is_active, expires_at)</code>: Composite index for background link cleanup jobs.", "category": "Database & Analytics"}, {"id": 32, "question": "What database indexes are created on the `ClickEvent` model?", "answer": "- <code>(link_id, -clicked_at)</code>: Composite index for fast link-specific time-series queries.<br>&bull; <code>(clicked_at, link_id)</code>: Composite index for system-wide date filtering and daily rollups.", "category": "Database & Analytics"}, {"id": 33, "question": "What is the purpose of the `DailyLinkMetrics` summary model?", "answer": "<code>DailyLinkMetrics</code> stores daily pre-aggregated JSON summaries (<code>total_clicks</code>, <code>unique_visitors</code>, <code>top_countries</code>, <code>top_browsers</code>) per link. This prevents expensive runtime aggregation scans over millions of raw <code>ClickEvent</code> rows when rendering long-term dashboard trends.", "category": "Monitoring & DevOps"}, {"id": 34, "question": "How is authentication handled in LinkStream?", "answer": "Via JSON Web Tokens (JWT) using <code>djangorestframework-simplejwt</code>. The server issues an Access Token (15-min lifespan) and a Refresh Token (1-day lifespan). Protected endpoints require a <code>Authorization: Bearer <access_token></code> header.", "category": "Security & Rate Limiting"}, {"id": 35, "question": "How does the custom User model differ from Django's default User model?", "answer": "<code>CustomUser</code> extends <code>AbstractBaseUser</code> and <code>PermissionsMixin</code>. It replaces integer primary keys with <code>UUID4</code> to prevent user enumeration attacks and uses <code>email</code> as the primary <code>USERNAME_FIELD</code>.", "category": "General Architecture"}, {"id": 36, "question": "Why are UUIDs preferred over auto-incrementing integer IDs in public APIs?", "answer": "Auto-incrementing IDs (e.g., <code>/users/42/</code>) reveal system size and allow competitors or attackers to enumerate all records sequentially (<code>ID 1, 2, 3...</code>). UUIDs are 128-bit cryptographically random strings, preventing resource harvesting.", "category": "General Architecture"}, {"id": 37, "question": "What is object-level permission in Django REST Framework, and how is it implemented?", "answer": "<code>IsOwner</code> inherits <code>permissions.BasePermission</code>. In <code>has_object_permission()</code>, it verifies <code>obj.user == request.user</code>, ensuring authenticated users can only view, update, or delete their own short links.", "category": "General Architecture"}, {"id": 38, "question": "How does token blacklisting work on user logout?", "answer": "When a user logs out, the frontend sends the Refresh Token to <code>/api/auth/logout/</code>. The backend passes it to <code>OutstandingToken</code> / <code>BlacklistedToken</code> models, invalidating the refresh token so it cannot be exchanged for new access tokens.", "category": "Security & Rate Limiting"}, {"id": 39, "question": "What is the structure of the React frontend application?", "answer": "A Single Page Application (SPA) built with React 18, Vite, React Router DOM v6, Tailwind CSS, Lucide React icons, and Recharts.", "category": "General Architecture"}, {"id": 40, "question": "How does the frontend handle automatic token refreshing on HTTP 401 errors?", "answer": "<code>api/client.js</code> configures an Axios response interceptor. On receiving a <code>401 Unauthorized</code> status, it intercepts the response, sends <code>refresh_token</code> to <code>/api/auth/token/refresh/</code>, updates <code>localStorage</code> with the new access token, and retries the failed request seamlessly.", "category": "Security & Rate Limiting"}, {"id": 41, "question": "How does the real-time auto-refresh mechanism work on `DashboardPage.jsx`?", "answer": "<code>DashboardPage</code> supports user-selectable polling intervals (Off, 3s, 5s, 10s). It uses a <code>useEffect</code> hook with <code>setInterval</code> to trigger background silently-fetched updates (<code>fetchDashboardData(true)</code>), updating link click counters live without reloading the DOM.", "category": "General Architecture"}, {"id": 42, "question": "How is debouncing implemented on the search bar in `DashboardPage.jsx`?", "answer": "A <code>useEffect</code> hook updates <code>debouncedSearch</code> after a 250ms delay using <code>setTimeout</code>. This prevents API spam on every keystroke while maintaining a fast, responsive user interface.", "category": "General Architecture"}, {"id": 43, "question": "What component renders the analytics visualizations in `AnalyticsPage.jsx`?", "answer": "<code>AnalyticsCharts.jsx</code> uses <code>Recharts</code> (<code>ResponsiveContainer</code>, <code>AreaChart</code>, <code>Area</code>, <code>XAxis</code>, <code>YAxis</code>, <code>Tooltip</code>) to render smoothed click volume area graphs alongside dimension percentage progress bars.", "category": "General Architecture"}, {"id": 44, "question": "How is Docker used in this project?", "answer": "The system uses multi-stage <code>Dockerfile</code> definitions for backend (Gunicorn) and frontend (Nginx), orchestrated via <code>docker-compose.yml</code> hosting 10 isolated containers.", "category": "Monitoring & DevOps"}, {"id": 45, "question": "List all 10 containers in the `docker-compose.yml` stack.", "answer": "1. <code>postgres</code> (DB)<br>2. <code>redis</code> (Cache)<br>3. <code>kafka</code> (Broker)<br>4. <code>backend</code> (Django API)<br>5. <code>kafka-consumer</code> (Analytics Ingestion Worker)<br>6. <code>celery-worker</code> (Async Tasks)<br>7. <code>celery-beat</code> (Scheduler)<br>8. <code>frontend</code> (Nginx + React SPA)<br>9. <code>prometheus</code> (Metrics Scraper)<br>10. <code>grafana</code> (Observability Dashboard)", "category": "Monitoring & DevOps"}, {"id": 46, "question": "Why is Gunicorn used instead of `python manage.py runserver` in production?", "answer": "Django's <code>runserver</code> is a single-threaded development server. Gunicorn is a WSGI HTTP server using a pre-fork worker model that manages multiple worker processes to handle concurrent production requests.", "category": "Monitoring & DevOps"}, {"id": 47, "question": "Why is Nginx used to serve the frontend production build?", "answer": "Nginx is a high-performance C-based web server that serves static HTML/JS/CSS files with sub-millisecond efficiency and proxies <code>/api/</code> requests to Gunicorn containers.", "category": "General Architecture"}, {"id": 48, "question": "How does the entrypoint script (`entrypoint.sh`) handle database readiness during Docker startup?", "answer": "It uses a <code>pg_isready</code> loop to poll PostgreSQL until TCP connections are accepted, executes <code>python manage.py migrate</code>, and then launches Gunicorn.", "category": "Monitoring & DevOps"}, {"id": 49, "question": "What metrics does Prometheus scrape from the backend?", "answer": "<code>redirect_requests_total</code> (Counter by status), <code>redirect_latency_seconds</code> (Histogram), <code>kafka_events_published_total</code> (Counter), and <code>kafka_events_consumed_total</code> (Counter).", "category": "Monitoring & DevOps"}, {"id": 50, "question": "How does Grafana connect to Prometheus?", "answer": "Grafana is configured via <code>monitoring/grafana/provisioning/datasources/datasource.yml</code> pointing to <code>http://prometheus:9090</code> as its default proxy datasource.", "category": "Monitoring & DevOps"}, {"id": 51, "question": "What load testing scenario is simulated in `locustfile.py`?", "answer": "<code>Locust</code> simulates 4 user behavior weights: Redirect lookups (70%), Link creation (15%), Analytics queries (10%), and Custom alias collisions (5%).", "category": "General Architecture"}, {"id": 52, "question": "What is Base62 decoding, and is it used in LinkStream?", "answer": "Base62 decoding converts a 7-character string back into a 64-bit integer ID. While LinkStream uses string-based B-Tree indexes for short code lookups, Base62 decoding can be used to convert codes directly to numeric primary keys.", "category": "Core URL Engine"}, {"id": 53, "question": "How does the system handle CORS (Cross-Origin Resource Sharing)?", "answer": "<code>django-cors-headers</code> is configured in <code>settings.py</code> with <code>CORS_ALLOWED_ORIGINS</code> allowing requests from <code>http://localhost:3000</code> and <code>http://127.0.0.1:3000</code>.", "category": "General Architecture"}, {"id": 54, "question": "What is the purpose of `pytest.ini` and `conftest.py` in the backend test suite?", "answer": "<code>pytest.ini</code> configures <code>DJANGO_SETTINGS_MODULE = config.settings</code>. <code>conftest.py</code> defines reusable fixtures (<code>api_client</code>, <code>test_user</code>, <code>auth_client</code>, <code>sample_link</code>).", "category": "General Architecture"}, {"id": 55, "question": "What is the difference between `select_related` and `prefetch_related` in Django ORM?", "answer": "<code>select_related</code> performs an SQL <code>INNER/LEFT JOIN</code> for single-valued relationships (ForeignKey, OneToOne). <code>prefetch_related</code> executes a separate SQL query and performs joining in Python memory for multi-valued relationships (ManyToMany, Reverse ForeignKey).", "category": "General Architecture"}, {"id": 56, "question": "Did you use `select_related` in your views?", "answer": "Yes, in <code>LinkViewSet</code> and analytics query services, <code>select_related('user')</code> is used when querying <code>Link</code> objects to prevent $N+1$ query overhead when serializing user details.", "category": "General Architecture"}, {"id": 57, "question": "What is the $N+1$ query problem, and how do you detect it?", "answer": "$N+1$ occurs when an application executes 1 initial query to fetch $N$ records, and then executes $N$ additional queries to fetch related foreign key models. It is detected using Django Debug Toolbar or logging SQL queries in tests.", "category": "General Architecture"}, {"id": 58, "question": "How does your application gracefully handle offline dev environments without Docker/Redis/Kafka?", "answer": "<code>settings.py</code> includes socket availability auto-detection (<code>is_service_available()</code>). If PostgreSQL/Redis/Kafka are absent, it automatically switches to SQLite, <code>LocMemCache</code>, and direct synchronous DB analytics writes.", "category": "Kafka Pipeline"}, {"id": 59, "question": "What is the difference between a Liveness probe and a Readiness probe in Kubernetes/Docker?", "answer": "Liveness probes (<code>/health/live/</code>) check if the process is running. Readiness probes (<code>/health/ready/</code>) check if downstream dependencies (PostgreSQL, Redis) are healthy and ready to serve traffic.", "category": "Monitoring & DevOps"}, {"id": 60, "question": "What HTTP status code is returned by `/health/ready/` if PostgreSQL is down?", "answer": "HTTP <code>503 Service Unavailable</code> with a JSON payload specifying <code>\"database\": \"unhealthy: connection failed\"</code>.", "category": "Database & Analytics"}, {"id": 61, "question": "What serializer handles Link creation validation?", "answer": "<code>LinkCreateSerializer</code> in <code>apps/links/serializers.py</code>.", "category": "General Architecture"}, {"id": 62, "question": "What URL validation is performed before storing destination URLs?", "answer": "<code>validate_original_url()</code> checks URL format (<code>http://</code> or <code>https://</code>), maximum length (2048 chars), and SSRF network safety via <code>is_ssrf_safe_url()</code>.", "category": "General Architecture"}, {"id": 63, "question": "What serializer handles user registration?", "answer": "<code>RegisterSerializer</code> in <code>apps/users/serializers.py</code>. It validates that <code>password</code> and <code>password_confirm</code> match and runs Django's password strength validators.", "category": "General Architecture"}, {"id": 64, "question": "How are passwords hashed in Django?", "answer": "By default, Django uses <code>PBKDF2PasswordHasher</code> with a SHA-256 hash, 600,000 iterations, and a random salt.", "category": "General Architecture"}, {"id": 65, "question": "What is the purpose of `read_only_fields` in DRF serializers?", "answer": "Fields marked as <code>read_only</code> are included in serialized JSON responses but ignored during deserialization (create/update), preventing clients from tampering with systemic fields like <code>id</code>, <code>click_count</code>, or <code>created_at</code>.", "category": "General Architecture"}, {"id": 66, "question": "Can an attacker pass `click_count=99999` in a `POST /api/links/` request payload?", "answer": "No. <code>click_count</code> is listed in <code>read_only_fields</code> in <code>LinkSerializer</code> and is omitted from <code>LinkCreateSerializer</code>, so any user-supplied <code>click_count</code> field is stripped during validation.", "category": "General Architecture"}, {"id": 67, "question": "How do you prevent Mass Assignment vulnerabilities in Django REST Framework?", "answer": "By explicitly declaring allowed fields in serializer <code>fields = (...)</code> rather than using <code>fields = '__all__'</code>, and creating dedicated creation/update serializers (<code>LinkCreateSerializer</code>, <code>LinkUpdateSerializer</code>).", "category": "General Architecture"}, {"id": 68, "question": "What is the purpose of `SimpleJWT` token rotation?", "answer": "When a client uses a refresh token to request a new access token, token rotation invalidates the old refresh token and issues a new refresh token, mitigating stolen token reuse attacks.", "category": "Security & Rate Limiting"}, {"id": 69, "question": "What is the structure of a JWT token?", "answer": "A Base64URL-encoded string consisting of three parts separated by dots: Header (algorithm & token type), Payload (claims like <code>user_id</code>, <code>exp</code>, <code>jti</code>), and Signature (<code>HMAC-SHA256(header + payload, secret)</code>).", "category": "Security & Rate Limiting"}, {"id": 70, "question": "How is JWT token verification stateless?", "answer": "The server does not need to query the database to verify a token. It recalculates the signature using <code>SECRET_KEY</code> and verifies expiration timestamp <code>exp</code>.", "category": "Security & Rate Limiting"}, {"id": 71, "question": "What is Celery Beat?", "answer": "Celery Beat is a periodic task scheduler that dispatches background tasks to Celery message queues at configured time intervals.", "category": "General Architecture"}, {"id": 72, "question": "What periodic tasks are configured in `backend/config/celery.py`?", "answer": "1. Hourly rollup task: Aggregates raw click events into <code>DailyLinkMetrics</code>.<br>2. Daily cleanup task: Cleans expired link cache keys from Redis.", "category": "General Architecture"}, {"id": 73, "question": "What is Gunicorn's pre-fork worker model?", "answer": "A master process creates a specified number of worker processes (<code>workers = 2 * CPU_CORES + 1</code>). The master manages workers, while individual workers handle incoming HTTP requests concurrently.", "category": "Monitoring & DevOps"}, {"id": 74, "question": "What WSGI file is used by Gunicorn in LinkStream?", "answer": "<code>backend/config/wsgi.py</code>.", "category": "Monitoring & DevOps"}, {"id": 75, "question": "What is ASGI, and why is `asgi.py` present in the project?", "answer": "Asynchronous Server Gateway Interface. <code>asgi.py</code> provides async support for Django, enabling future WebSockets or HTTP/2 capabilities.", "category": "General Architecture"}, {"id": 76, "question": "If your API experiences high CPU utilization due to cryptography/hashing, how would you scale Gunicorn?", "answer": "Increase worker process count or switch from synchronous worker class (<code>sync</code>) to asynchronous eventlet/gevent workers (<code>--worker-class gevent</code>).", "category": "Monitoring & DevOps"}, {"id": 77, "question": "What is the difference between multi-processing and multi-threading in Python?", "answer": "Due to Python's Global Interpreter Lock (GIL), multi-threading cannot execute pure CPython bytecode across multiple CPU cores simultaneously. Multi-processing spawns separate OS processes with independent memory spaces, utilizing multiple CPU cores fully.", "category": "General Architecture"}, {"id": 78, "question": "How does the GIL affect Django performance?", "answer": "The GIL limits single CPython processes to one execution thread at a time for CPU-bound tasks. Gunicorn bypasses this by spawning multiple independent OS processes.", "category": "General Architecture"}, {"id": 79, "question": "What is the purpose of `locustfile.py`?", "answer": "It defines Python load-test user behavior classes (<code>HttpUser</code>, <code>task</code>) to execute automated HTTP stress tests against API endpoints.", "category": "General Architecture"}, {"id": 80, "question": "What key performance indicator (KPI) is measured during load testing?", "answer": "Requests Per Second (RPS), Average Response Time, P95/P99 Latency, and Error Rate under high concurrent user loads.", "category": "General Architecture"}, {"id": 81, "question": "What is the difference between P95 and P99 latency?", "answer": "P95 latency is the maximum response time experienced by 95% of users. P99 latency is the response time experienced by 99% of users, highlighting worst-case tail latencies.", "category": "System Design & Scale"}, {"id": 82, "question": "Why is average response time often a misleading metric in distributed systems?", "answer": "Averages hide extreme tail latency outliers. For example, if 99 requests take 2ms and 1 request takes 2000ms, the average is ~22ms, masking the severe performance bottleneck affecting 1% of traffic.", "category": "General Architecture"}, {"id": 83, "question": "What is Redis Cache-Aside pattern step-by-step?", "answer": "1. Application receives read request.<br>2. Reads from Redis.<br>3. If hit, returns data.<br>4. If miss, reads from Database.<br>5. Writes fetched data back to Redis.<br>6. Returns data to client.", "category": "Redis & Caching"}, {"id": 84, "question": "What is Cache Invalidation, and how is it triggered in LinkStream?", "answer": "Cache invalidation removes outdated cached items. When a user updates or deletes a short link (<code>perform_update</code>, <code>perform_destroy</code>), <code>LinkService.invalidate_link_cache(short_code)</code> deletes key <code>urlshortener:link:{short_code}</code> from Redis.", "category": "Redis & Caching"}, {"id": 85, "question": "What is TTL (Time-To-Live) in Redis?", "answer": "TTL specifies the automatic expiration lifespan of a cache key. LinkStream sets Redis link key TTL dynamically based on link expiration (<code>expires_at - now</code>) or defaults to 24 hours (86,400 seconds).", "category": "Redis & Caching"}, {"id": 86, "question": "What happens if Redis runs out of memory?", "answer": "Redis enforces its configured <code>maxmemory-policy</code> (e.g., <code>allkeys-lru</code> - Least Recently Used eviction). It automatically evicts the least recently accessed keys to free memory for new cache entries.", "category": "Redis & Caching"}, {"id": 87, "question": "What is the difference between `volatile-lru` and `allkeys-lru` in Redis?", "answer": "<code>volatile-lru</code> evicts the least recently used keys among those that have an explicit TTL set. <code>allkeys-lru</code> evicts LRU keys across the entire key namespace regardless of TTL.", "category": "Redis & Caching"}, {"id": 88, "question": "What Redis data structures are used in LinkStream?", "answer": "- <code>Strings</code>: For cached link destination JSON payloads (<code>urlshortener:link:{short_code}</code>).<br>&bull; <code>Sorted Sets (ZSET)</code>: For sliding window rate limiting (<code>ratelimit:{action}:{id}</code>).", "category": "Redis & Caching"}, {"id": 89, "question": "How does Tailwind CSS work in the frontend?", "answer": "Tailwind is a utility-first CSS framework. It compiles utility classes directly into lightweight CSS during Vite build time, eliminating unused styling code.", "category": "General Architecture"}, {"id": 90, "question": "What icon library is used in the frontend?", "answer": "<code>Lucide React</code>.", "category": "General Architecture"}, {"id": 91, "question": "What component renders the metric overview cards on `DashboardPage.jsx`?", "answer": "<code>StatCard.jsx</code> with configurable title, count value, icon, glow accents, and badges.", "category": "General Architecture"}, {"id": 92, "question": "What component renders individual link items on `DashboardPage.jsx`?", "answer": "<code>LinkCard.jsx</code> displaying full short URL, destination URL, click count, status pill, copy button, analytics link, toggle status button, and delete button.", "category": "General Architecture"}, {"id": 93, "question": "What component handles modal creation of new short links?", "answer": "<code>CreateLinkModal.jsx</code>.", "category": "General Architecture"}, {"id": 94, "question": "How does `navigator.clipboard.writeText()` work in `LinkCard.jsx`?", "answer": "It invokes the browser's asynchronous Clipboard API to copy the full short URL string to the user's OS clipboard, toggling temporary UI feedback (<code>\"Copied\"</code> checkmark).", "category": "General Architecture"}, {"id": 95, "question": "What is Vite, and why is it used instead of Create React App (CRA)?", "answer": "Vite is a next-generation frontend build tool powered by native ES modules and Esbuild. It provides near-instantaneous Hot Module Replacement (HMR) and significantly faster production builds than CRA.", "category": "General Architecture"}, {"id": 96, "question": "How does Axios handle Request Interceptors in `api/client.js`?", "answer": "Before every HTTP request is sent, the interceptor retrieves <code>access_token</code> from <code>localStorage</code> and attaches header <code>Authorization: Bearer <token></code>.", "category": "General Architecture"}, {"id": 97, "question": "How does Axios handle Response Interceptors for token refresh?", "answer": "If an API call returns <code>401 Unauthorized</code>, the response interceptor pauses, issues a POST request to <code>/api/auth/token/refresh/</code> using <code>refresh_token</code>, saves the new access token, updates request headers, and retries the original API call.", "category": "Security & Rate Limiting"}, {"id": 98, "question": "What happens if the refresh token itself is expired or invalid?", "answer": "The refresh request fails with HTTP 401. The catch block purges <code>access_token</code> and <code>refresh_token</code> from <code>localStorage</code> and redirects the user to <code>/login</code>.", "category": "Security & Rate Limiting"}, {"id": 99, "question": "What is the purpose of `Recharts` in `AnalyticsCharts.jsx`?", "answer": "<code>Recharts</code> renders responsive SVG area charts plotting click volume over time (<code>clicks</code> and <code>unique_visitors</code>) alongside dimension progress bars.", "category": "General Architecture"}, {"id": 100, "question": "How does `AnalyticsQueryService.get_link_analytics()` format time-series data?", "answer": "For a 24-hour window, it aggregates click events into 24 hourly slots (<code>%H:00</code>). For 7-day or 30-day windows, it aggregates events by date (<code>%b %d</code>).", "category": "General Architecture"}, {"id": 101, "question": "What is the database constraint `unique_daily_link_metric` on `DailyLinkMetrics`?", "answer": "A <code>UniqueConstraint</code> on <code>(link, date)</code> ensuring that each link has at most one pre-aggregated rollup row per calendar date.", "category": "Monitoring & DevOps"}, {"id": 102, "question": "How does `AnalyticsQueryService` retrieve dimension breakdowns?", "answer": "<code>_aggregate_dimension()</code> performs SQL grouping and aggregation using <code>queryset.values(field).annotate(count=Count('id')).order_by('-count')[:limit]</code>.", "category": "General Architecture"}, {"id": 103, "question": "What dimension breakdown categories are calculated?", "answer": "Top Countries (<code>country_code</code>), Top Devices (<code>device_type</code>), Top Browsers (<code>browser</code>), and Top Referrers (<code>referrer</code>).", "category": "General Architecture"}, {"id": 104, "question": "What is `drf-spectacular`?", "answer": "An OpenAPI 3.0 schema generation library for Django REST Framework that inspects serializers, views, and parameters to generate interactive Swagger UI (<code>/api/docs/</code>) and ReDoc (<code>/api/redoc/</code>) documentation.", "category": "General Architecture"}, {"id": 105, "question": "How are Swagger API schemas customized in DRF views?", "answer": "Using the <code>@extend_schema</code> decorator to document request bodies, parameters, tags, and response models.", "category": "General Architecture"}, {"id": 106, "question": "Why is API documentation important for backend engineering projects?", "answer": "It acts as an authoritative contract between backend developers, frontend teams, and third-party API consumers, detailing endpoints, payload types, error codes, and authentication methods.", "category": "General Architecture"}, {"id": 107, "question": "What is the difference between Swagger UI and ReDoc?", "answer": "Swagger UI provides an interactive interface allowing users to execute live API calls (<code>Try it out</code>). ReDoc provides a clean, three-panel static documentation layout focused on readability.", "category": "General Architecture"}, {"id": 108, "question": "What is `django_prometheus`?", "answer": "A Django library that exports framework-level metrics (DB query execution count, view execution duration, HTTP response status codes) via endpoint <code>/metrics</code>.", "category": "Monitoring & DevOps"}, {"id": 109, "question": "What is a Kafka Topic?", "answer": "A named channel or log stream in Kafka where producers publish records and consumers pull records.", "category": "Kafka Pipeline"}, {"id": 110, "question": "What is a Kafka Partition?", "answer": "A Topic is split into multiple Partitions distributed across brokers. Partitions enable horizontal scale, parallel processing, and ordered log commits.", "category": "Kafka Pipeline"}, {"id": 111, "question": "How does LinkStream partition click events in Kafka?", "answer": "<code>ClickEventProducer</code> partitions messages using <code>key=str(link_id).encode('utf-8')</code>. All click events for the same short link land on the same partition, guaranteeing strict ordering per link.", "category": "Kafka Pipeline"}, {"id": 112, "question": "What is a Kafka Consumer Group?", "answer": "A group of consumer workers cooperating to read data from a topic. Kafka assigns distinct topic partitions to distinct consumers within the group.", "category": "Kafka Pipeline"}, {"id": 113, "question": "What happens if a consumer worker in a group crashes?", "answer": "Kafka triggers a <strong>Rebalance</strong>. It reassigns the partitions previously owned by the failed consumer to the remaining active consumers in the group.", "category": "Kafka Pipeline"}, {"id": 114, "question": "What is Kafka message serialization?", "answer": "Converting in-memory Python dictionaries into raw byte streams (e.g., JSON UTF-8 bytes) before transmitting across the network.", "category": "Kafka Pipeline"}, {"id": 115, "question": "What parameter controls Kafka producer acknowledgment?", "answer": "<code>acks=1</code>. The leader broker writes the record to its local log and responds to the producer without waiting for full replica acknowledgments, balancing latency and durability.", "category": "Kafka Pipeline"}, {"id": 116, "question": "What is the difference between `acks=0`, `acks=1`, and `acks=all` (`acks=-1`) in Kafka?", "answer": "- <code>acks=0</code>: Producer does not wait for acknowledgment (highest throughput, risk of data loss).<br>&bull; <code>acks=1</code>: Producer waits for leader broker acknowledgment (medium throughput, resilient to follower failure).<br>&bull; <code>acks=all</code>: Producer waits for leader and all in-sync replicas (ISR) to acknowledge (highest durability, higher latency).", "category": "Kafka Pipeline"}, {"id": 117, "question": "What is the `linger.ms` setting in Kafka Producer?", "answer": "<code>linger.ms=10</code> instructs the producer to wait up to 10ms before sending a batch of messages, allowing small requests to combine into larger, network-efficient batches.", "category": "Kafka Pipeline"}, {"id": 118, "question": "What is `max.block.ms` in Kafka Producer?", "answer": "<code>max.block.ms=500</code> limits the maximum time <code>producer.send()</code> will block if Kafka metadata is unavailable or internal buffers are full, after which it falls back gracefully.", "category": "Kafka Pipeline"}, {"id": 119, "question": "What is PostgreSQL B-Tree index, and why is it used for `short_code`?", "answer": "B-Tree (Balanced Tree) is a self-balancing tree data structure that maintains sorted data. It provides $O(\\log N)$ time complexity for equality (<code>=</code>) and range queries (<code><</code>, <code>></code>), ideal for <code>short_code</code> string lookups.", "category": "Database & Analytics"}, {"id": 120, "question": "What is a Composite Index in database systems?", "answer": "An index created on multiple columns combined (e.g., <code>(user_id, -created_at)</code>). It allows PostgreSQL to satisfy multi-column <code>WHERE</code> and <code>ORDER BY</code> clauses in a single index scan without sorting in memory.", "category": "Database & Analytics"}, {"id": 121, "question": "What is the Leftmost Prefix Rule in Composite Indexes?", "answer": "A composite index on <code>(A, B)</code> can satisfy queries filtering by <code>(A)</code> or <code>(A, B)</code>, but cannot be used for queries filtering only by <code>(B)</code>.", "category": "Database & Analytics"}, {"id": 122, "question": "What is database connection pooling, and why is `CONN_MAX_AGE` set in `settings.py`?", "answer": "Connection pooling reuses open database TCP connections across multiple HTTP requests. <code>CONN_MAX_AGE = 60</code> keeps database connections open for 60 seconds, eliminating connection setup overhead on every request.", "category": "General Architecture"}, {"id": 123, "question": "What is the difference between `BIGINT` and `INTEGER` in PostgreSQL?", "answer": "<code>INTEGER</code> is a 4-byte integer (up to ~2.14 Billion). <code>BIGINT</code> is an 8-byte integer (up to ~9.22 Quintillion). <code>click_count</code> uses <code>BIGINT</code> to prevent integer overflow on high-traffic links.", "category": "Database & Analytics"}, {"id": 124, "question": "What is the purpose of `db.sqlite3` in local development?", "answer": "SQLite is a serverless, zero-configuration file-based database used for fast local development and lightweight automated testing without running a dedicated PostgreSQL server.", "category": "General Architecture"}, {"id": 125, "question": "How does `settings.py` automatically detect database configuration?", "answer": "<code>is_service_available(DB_HOST, DB_PORT)</code> tests TCP socket connection to PostgreSQL port 5432. If unavailable, it sets <code>USE_SQLITE = True</code> and switches to <code>db.sqlite3</code>.", "category": "General Architecture"}, {"id": 126, "question": "Why is SQLite NOT suitable for high-concurrency production deployments?", "answer": "SQLite uses file-level write locking. Multiple concurrent write operations lock the entire database file, causing severe lock contention and <code>database is locked</code> errors under concurrent write traffic.", "category": "Monitoring & DevOps"}, {"id": 127, "question": "What is database sharding?", "answer": "Horizontal partitioning of a database across multiple physical server nodes based on a shard key (e.g., <code>hash(short_code) % N_shards</code>).", "category": "General Architecture"}, {"id": 128, "question": "How would you shard LinkStream if link storage grew to 10 Billion rows?", "answer": "Shard the <code>links</code> table across multiple PostgreSQL database clusters using <code>hash(short_code)</code> as the shard key, using a database router or proxy like Vitess / Citus DB.", "category": "General Architecture"}, {"id": 129, "question": "What is Cross-Site Scripting (XSS), and how does LinkStream protect against it?", "answer": "XSS occurs when malicious JavaScript is injected into web pages. React automatically escapes HTML contents rendered in JSX, and Django sanitizes headers and template rendering.", "category": "General Architecture"}, {"id": 130, "question": "What is Cross-Site Request Forgery (CSRF), and why are stateless JWT APIs immune to traditional CSRF?", "answer": "CSRF tricks authenticated browsers into making unauthorized requests via auto-sent cookies. LinkStream uses JWT tokens stored in JS memory / headers (<code>Authorization: Bearer</code>), which browsers do not automatically attach to cross-site requests.", "category": "Security & Rate Limiting"}, {"id": 131, "question": "What is HTTP Strict Transport Security (HSTS)?", "answer": "A security header (<code>Strict-Transport-Security</code>) that forces browsers to communicate with the server exclusively via encrypted HTTPS connections.", "category": "Security & Rate Limiting"}, {"id": 132, "question": "What is Content Security Policy (CSP)?", "answer": "An HTTP header that restricts the sources from which scripts, styles, images, and frames can be loaded, mitigating XSS and data injection attacks.", "category": "Security & Rate Limiting"}, {"id": 133, "question": "What is the difference between authentication and authorization?", "answer": "Authentication verifies *who the user is* (e.g., email & password login). Authorization determines *what resources the authenticated user is allowed to access* (e.g., <code>IsOwner</code> permission class).", "category": "Security & Rate Limiting"}, {"id": 134, "question": "How does Django handle password validation?", "answer": "Via <code>AUTH_PASSWORD_VALIDATORS</code> in <code>settings.py</code>, validating minimum length (8+ chars), checking against common passwords, checking for all-numeric patterns, and verifying user attribute dissimilarity.", "category": "General Architecture"}, {"id": 135, "question": "What is `django-cors-headers` middleware, and why must it be placed high in `MIDDLEWARE` order?", "answer": "It appends CORS response headers (<code>Access-Control-Allow-Origin</code>). It must be placed before view handling so CORS headers are included even on early exception responses.", "category": "General Architecture"}, {"id": 136, "question": "What is a Denial of Service (DoS) Slowloris attack?", "answer": "An attack where the client opens multiple HTTP connections and sends headers very slowly, holding server sockets open until worker pools are exhausted. Nginx mitigates this using <code>client_body_timeout</code> and <code>client_header_timeout</code>.", "category": "General Architecture"}, {"id": 137, "question": "How does Nginx protect Gunicorn from slow clients?", "answer": "Nginx acts as a reverse proxy buffer. It reads the complete slow HTTP request from the client into memory before opening a fast local socket connection to Gunicorn.", "category": "Monitoring & DevOps"}, {"id": 138, "question": "What is rate limit graceful degradation?", "answer": "If the rate limiting store (Redis) fails, the rate limiter fails open (or falls back to local memory), prioritizing system availability over strict quota enforcement.", "category": "Security & Rate Limiting"}, {"id": 139, "question": "What is the role of Gunicorn in Docker container deployment?", "answer": "Gunicorn serves as the production WSGI application server inside the <code>backend</code> container, handling HTTP requests dispatched by Nginx.", "category": "Monitoring & DevOps"}, {"id": 140, "question": "What is the command used to start Gunicorn in `backend/Dockerfile`?", "answer": "<code>gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2</code>.", "category": "Monitoring & DevOps"}, {"id": 141, "question": "What is multi-stage Docker build, and why is it used for the frontend?", "answer": "Multi-stage builds use separate <code>FROM</code> stages. Stage 1 (<code>node:20-alpine</code>) compiles React source code into static asset bundles via <code>npm run build</code>. Stage 2 (<code>nginx:alpine</code>) copies only the compiled <code>/dist</code> directory, producing a lightweight (~20MB) production image.", "category": "Monitoring & DevOps"}, {"id": 142, "question": "What is the contents of `frontend/nginx.conf`?", "answer": "It configures Nginx to serve static files from <code>/usr/share/nginx/html</code>, routes SPA fallback requests via <code>try_files $uri $uri/ /index.html;</code>, and proxies <code>/api/</code> calls to <code>http://backend:8000/api/</code>.", "category": "General Architecture"}, {"id": 143, "question": "What is Docker Volume, and why are volumes defined for `postgres_data` and `redis_data`?", "answer": "Containers are ephemeral (data is erased on container stop). Docker Volumes persist database files on the host filesystem independently of container lifecycles.", "category": "Redis & Caching"}, {"id": 144, "question": "What is Docker Network, and how do containers communicate in `docker-compose.yml`?", "answer": "Docker Compose creates an isolated virtual bridge network. Services resolve each other by container service name (e.g., <code>http://postgres:5432</code>, <code>redis://redis:6379</code>).", "category": "Monitoring & DevOps"}, {"id": 145, "question": "What is `.env.example`?", "answer": "A template file committed to version control that documents required environment variables without exposing sensitive production secrets.", "category": "General Architecture"}, {"id": 146, "question": "Why should `.env` files NEVER be committed to Git?", "answer": "<code>.env</code> files contain sensitive credentials (API secret keys, database passwords, JWT signing keys). Committing secrets to Git exposes them to security leaks.", "category": "General Architecture"}, {"id": 147, "question": "How does `.gitignore` prevent accidental secret commits?", "answer": "It lists file patterns (<code>.env</code>, <code>*.log</code>, <code>db.sqlite3</code>, <code>node_modules/</code>, <code>venv/</code>) that Git explicitly ignores during <code>git add</code>.", "category": "Security & Rate Limiting"}, {"id": 148, "question": "What is GitHub CLI (`gh`), and how was it used to publish this repository?", "answer": "<code>gh</code> is GitHub's official command-line tool. It was used to execute <code>gh repo create scalable-url-shortener-analytics --public --source=. --push</code>, creating and pushing the repo directly from the shell.", "category": "General Architecture"}, {"id": 149, "question": "What is Prometheus scraping?", "answer": "Prometheus uses a pull model. It periodically issues HTTP <code>GET /metrics</code> requests to target services to retrieve metrics formatted in Prometheus text exposition format.", "category": "Monitoring & DevOps"}, {"id": 150, "question": "What is PromQL?", "answer": "Prometheus Query Language, used to query time-series metrics, calculate rates over time (<code>rate()</code>), and aggregate metrics across dimensions.", "category": "General Architecture"}, {"id": 151, "question": "Write a PromQL query to calculate the 5-minute average HTTP request rate per second.", "answer": "<code>sum(rate(redirect_requests_total[5m]))</code>.", "category": "General Architecture"}, {"id": 152, "question": "What is Grafana Provisioning?", "answer": "Automated configuration of Grafana datasources (<code>datasource.yml</code>) and dashboards (<code>dashboard.yml</code>) from YAML/JSON files on container boot, eliminating manual UI configuration.", "category": "Monitoring & DevOps"}, {"id": 153, "question": "What is the purpose of `django_prometheus.urls` in `urls.py`?", "answer": "Exposes <code>/metrics</code> endpoint for Prometheus scraping.", "category": "Monitoring & DevOps"}, {"id": 154, "question": "What is a Prometheus Counter vs Histogram?", "answer": "- <strong>Counter:</strong> A cumulative metric that only increases (e.g., <code>redirect_requests_total</code>).<br>&bull; <strong>Histogram:</strong> Samples observations into configurable latency buckets (e.g., <code>redirect_latency_seconds</code>).", "category": "Monitoring & DevOps"}, {"id": 155, "question": "What is Grafana Alerting?", "answer": "Rules configured in Grafana that evaluate PromQL queries and dispatch notifications (PagerDuty, Slack, Email) when thresholds are breached.", "category": "Monitoring & DevOps"}, {"id": 156, "question": "Why does Prometheus use a Pull model instead of a Push model?", "answer": "The pull model allows Prometheus to control scraping frequency, detect target down states automatically (if target fails to respond to HTTP scrape), and prevents targets from overwhelming the metrics server.", "category": "Monitoring & DevOps"}, {"id": 157, "question": "What is Pushgateway in Prometheus?", "answer": "An intermediary metric cache used for short-lived batch jobs (like Celery scripts) that exit before Prometheus can scrape them.", "category": "Monitoring & DevOps"}, {"id": 158, "question": "What metric detects consumer lag in Kafka?", "answer": "<code>kafka_consumergroup_lag</code> measured by Prometheus Kafka Exporter.", "category": "Kafka Pipeline"}, {"id": 159, "question": "What is `pytest`?", "answer": "A Python testing framework providing clean syntax, fixture management, and assertions.", "category": "General Architecture"}, {"id": 160, "question": "What is `pytest-django`?", "answer": "A plugin supplying Django-specific test fixtures (<code>db</code>, <code>client</code>, <code>settings</code>, <code>rf</code>).", "category": "General Architecture"}, {"id": 161, "question": "What does `@pytest.mark.django_db` decorator do?", "answer": "Instructs pytest to set up a clean, isolated test database for the duration of the test.", "category": "General Architecture"}, {"id": 162, "question": "What is unit testing vs integration testing?", "answer": "- <strong>Unit Testing:</strong> Tests individual functions in isolation (e.g., <code>base62.encode()</code>).<br>&bull; <strong>Integration Testing:</strong> Tests interactions across multiple modules (e.g., API request $\\rightarrow$ Serializer $\\rightarrow$ ORM $\\rightarrow$ Response).", "category": "General Architecture"}, {"id": 163, "question": "How are HTTP API calls tested in `test_auth.py` and `test_links.py`?", "answer": "Using DRF's <code>APIClient()</code> fixture to dispatch HTTP requests (<code>client.post()</code>, <code>client.get()</code>) and assert response status codes and JSON payloads.", "category": "Security & Rate Limiting"}, {"id": 164, "question": "How are mocks used in `test_cache.py`?", "answer": "<code>unittest.mock</code> / <code>pytest-mock</code> patches <code>cache.get</code> and <code>cache.set</code> methods to verify cache hits and misses without requiring a live Redis server.", "category": "Redis & Caching"}, {"id": 165, "question": "What test file tests Base62 encoding?", "answer": "<code>backend/tests/test_links.py</code>.", "category": "Core URL Engine"}, {"id": 166, "question": "What is Code Coverage, and how is it measured in Python?", "answer": "Code coverage measures the percentage of source code executed during test suite runs. It is measured using <code>coverage.py</code> (<code>pytest --cov=apps</code>).", "category": "General Architecture"}, {"id": 167, "question": "What is Test-Driven Development (TDD)?", "answer": "A development workflow: Write a failing test first (Red), implement code to make the test pass (Green), and then refactor code (Refactor).", "category": "General Architecture"}, {"id": 168, "question": "How do you mock Kafka publishing during pytest execution?", "answer": "<code>settings.IS_TESTING = True</code> instructs <code>ClickEventProducer.get_producer()</code> to return <code>None</code>, bypassing Kafka network socket calls during test execution.", "category": "Kafka Pipeline"}, {"id": 169, "question": "What is Base62 character set order?", "answer": "<code>0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ</code> (62 characters).", "category": "Core URL Engine"}, {"id": 170, "question": "Convert integer `0` to Base62.", "answer": "<code>'0'</code>.", "category": "Core URL Engine"}, {"id": 171, "question": "What is the main advantage of Base62 over Base64 for URLs?", "answer": "Base64 includes special characters <code>+</code> and <code>/</code> (and <code>=</code> padding), which have special meanings in URL paths and query parameters. Base62 contains only URL-safe alphanumeric characters.", "category": "Core URL Engine"}, {"id": 172, "question": "What is the maximum string length of a destination URL supported in `LinkCreateSerializer`?", "answer": "2048 characters (matching standard web browser maximum URL limits).", "category": "General Architecture"}, {"id": 173, "question": "What is the default expiration time for Redis link cache keys?", "answer": "86,400 seconds (24 hours).", "category": "Redis & Caching"}, {"id": 174, "question": "What is the purpose of `manage.py` in Django?", "answer": "A command-line script for executing Django management commands (<code>runserver</code>, <code>migrate</code>, <code>makemigrations</code>, <code>createsuperuser</code>).", "category": "General Architecture"}, {"id": 175, "question": "What command creates new database migrations after modifying `models.py`?", "answer": "<code>python manage.py makemigrations</code>.", "category": "Database & Analytics"}, {"id": 176, "question": "What command applies pending migrations to the database?", "answer": "<code>python manage.py migrate</code>.", "category": "Database & Analytics"}, {"id": 177, "question": "What is Django migration dependency tracking?", "answer": "Django records applied migration files in the <code>django_migrations</code> table to ensure migrations execute in strict order across dependencies.", "category": "Database & Analytics"}, {"id": 178, "question": "What happens if two developers create conflicting migrations on the same branch?", "answer": "Django raises a <code>CommandError: Conflicting migrations detected</code>. Resolved by running <code>python manage.py makemigrations --merge</code>.", "category": "Database & Analytics"}, {"id": 179, "question": "What is React Virtual DOM?", "answer": "A lightweight in-memory representation of the real DOM. React compares Virtual DOM trees (Reconciliation) and updates only changed elements in the real DOM.", "category": "General Architecture"}, {"id": 180, "question": "What is `useState` hook in React?", "answer": "A hook allowing functional components to manage local state variables.", "category": "General Architecture"}, {"id": 181, "question": "What is `useEffect` hook in React?", "answer": "A hook for executing side effects (data fetching, subscriptions, timers) in functional components.", "category": "General Architecture"}, {"id": 182, "question": "What is `useCallback` hook in React?", "answer": "A hook that memoizes function definitions across re-renders to prevent unnecessary child component re-renders.", "category": "General Architecture"}, {"id": 183, "question": "What is `useParams` hook in React Router?", "answer": "A hook that extracts dynamic URL path parameters (e.g., <code>linkId</code> from <code>/analytics/:linkId</code>).", "category": "General Architecture"}, {"id": 184, "question": "What is `useNavigate` hook in React Router?", "answer": "A hook providing programmatic navigation between routes (e.g., <code>navigate('/login')</code>).", "category": "General Architecture"}, {"id": 185, "question": "What is `ProtectedPage` component in `App.jsx`?", "answer": "A higher-order wrapper component that checks if user is authenticated; if <code>user == null</code>, it renders <code><Navigate to=\"/login\" replace /></code>.", "category": "General Architecture"}, {"id": 186, "question": "What is Prop Drilling in React, and how can it be avoided?", "answer": "Prop drilling passes props through multiple levels of nested components. Avoided using React Context API or Redux state management.", "category": "General Architecture"}, {"id": 187, "question": "What is `React.StrictMode`?", "answer": "A development tool that highlights potential problems in an application by running render functions twice to catch side effects.", "category": "General Architecture"}, {"id": 188, "question": "What is Hot Module Replacement (HMR)?", "answer": "A Vite feature that updates modified modules in the browser instantly without refreshing state or reloading the entire page.", "category": "General Architecture"}, {"id": 189, "question": "What is the current capacity of LinkStream's 7-character Base62 keyspace?", "answer": "3.52 Trillion links.", "category": "Core URL Engine"}, {"id": 190, "question": "What is the current bottleneck if traffic scales from 1K QPS to 100K QPS?", "answer": "Single-node PostgreSQL write contention and Redis network bandwidth.", "category": "Redis & Caching"}, {"id": 191, "question": "How would CDN Edge Redirection optimize the platform at 100K QPS?", "answer": "Cache short URL mappings at CDN Edge Workers (Cloudflare Workers / AWS CloudFront KeyValueStore), returning redirects at the network edge in <strong>< 5ms</strong> without hitting origin servers.", "category": "Core URL Engine"}, {"id": 192, "question": "What is TimescaleDB, and why is it recommended for scaling click events?", "answer": "An open-source time-series extension for PostgreSQL. It automatically partitions tables into time-based chunks (Hypertables), speeding up analytical queries.", "category": "System Design & Scale"}, {"id": 193, "question": "What is Log Compaction in Apache Kafka?", "answer": "A retention policy where Kafka retains the latest record for each message key within a partition, acting as a state store.", "category": "Kafka Pipeline"}, {"id": 194, "question": "What is an In-Memory LRU Cache?", "answer": "Least Recently Used cache evicts the items accessed longest ago when capacity limits are reached.", "category": "Redis & Caching"}, {"id": 195, "question": "What is a Circuit Breaker pattern in distributed systems?", "answer": "A pattern that detects downstream service failures (e.g., Redis down) and immediately rejects or reroutes requests without waiting for timeout periods.", "category": "General Architecture"}, {"id": 196, "question": "What is a Thundering Herd Problem on database startup?", "answer": "When a database restarts, cold caches cause all incoming requests to hit the DB simultaneously. Mitigated by cache warming scripts.", "category": "General Architecture"}, {"id": 197, "question": "What is Database Connection Starvation?", "answer": "When all available database pool connections are exhausted by slow queries, blocking new API requests.", "category": "General Architecture"}, {"id": 198, "question": "What is a Backpressure Mechanism in reactive streams?", "answer": "A control flow mechanism where consumers signal producers to slow down data transmission when consumer queues become full.", "category": "General Architecture"}, {"id": 199, "question": "Summarize the complete technical architecture of LinkStream in one sentence.", "answer": "LinkStream is a high-performance, event-driven URL shortener that achieves sub-10ms redirects using Redis Cache-Aside caching while offloading click telemetry asynchronously to Apache Kafka and PostgreSQL batch workers under full Prometheus/Grafana observability.", "category": "General Architecture"}, {"id": 200, "question": "If an examiner asks why you built this project, what is your closing response?", "answer": "\"I built LinkStream to master real-world distributed systems engineering\u2014learning how to separate high-velocity read paths from analytical write streams, implement fault-tolerant caching and rate limiting, containerize complex microservices, and instrument full-stack observability for high-concurrency production systems.\"", "category": "General Architecture"}];
+  let currentCategory = 'all';
+  let searchQuery = '';
+  let currentView = 'list';
+  let filteredItems = [...ALL_QUESTIONS];
+  let flashcardIndex = 0;
+  let flashcardFlipped = false;
+  
+  // LocalStorage mastered set
+  let masteredSet = new Set(JSON.parse(localStorage.getItem('linkstream_mastered_qa') || '[]'));
+
+  function updateMasteredUI() {
+    document.getElementById('stat-mastered').textContent = `${masteredSet.size} / 200`;
+  }
+
+  function toggleMastered(id, event) {
+    if (event) event.stopPropagation();
+    if (masteredSet.has(id)) {
+      masteredSet.delete(id);
+    } else {
+      masteredSet.add(id);
+    }
+    localStorage.setItem('linkstream_mastered_qa', JSON.stringify([...masteredSet]));
+    updateMasteredUI();
+    renderList();
+  }
+
+  function filterData() {
+    filteredItems = ALL_QUESTIONS.filter(item => {
+      const matchesCategory = currentCategory === 'all' || item.category === currentCategory;
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q || 
+        item.question.toLowerCase().includes(q) || 
+        item.answer.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q) ||
+        (`q${item.id}`).includes(q);
+      return matchesCategory && matchesSearch;
+    });
+
+    document.getElementById('stat-showing').textContent = filteredItems.length;
+
+    if (currentView === 'list') {
+      renderList();
+    } else {
+      flashcardIndex = 0;
+      renderFlashcard();
+    }
+  }
+
+  function renderList() {
+    const grid = document.getElementById('qa-grid');
+    const empty = document.getElementById('empty-state');
+    
+    if (filteredItems.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    grid.innerHTML = filteredItems.map(item => {
+      const isMastered = masteredSet.has(item.id);
+      return `
+        <div class="qa-card ${isMastered ? 'mastered' : ''}" id="card-${item.id}">
+          <div class="card-top">
+            <span class="card-badge">${item.category}</span>
+            <div class="card-actions">
+              <button class="action-btn ${isMastered ? 'active' : ''}" 
+                      title="${isMastered ? 'Mark as reviewing' : 'Mark as mastered'}" 
+                      onclick="toggleMastered(${item.id}, event)">
+                ${isMastered ? '✓ Mastered' : '○ Master'}
+              </button>
+            </div>
+          </div>
+          <div class="qa-question">
+            <span class="q-num">Q${item.id}:</span>${item.question}
+          </div>
+          <div class="qa-answer">
+            ${item.answer}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function setCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.pill').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.startsWith(cat) || (cat === 'all' && btn.textContent.startsWith('All')));
+    });
+    filterData();
+  }
+
+  function setViewMode(mode) {
+    currentView = mode;
+    document.getElementById('btn-list-view').classList.toggle('active', mode === 'list');
+    document.getElementById('btn-card-view').classList.toggle('active', mode === 'card');
+
+    if (mode === 'list') {
+      document.getElementById('qa-grid').style.display = 'grid';
+      document.getElementById('flashcard-container').style.display = 'none';
+      renderList();
+    } else {
+      document.getElementById('qa-grid').style.display = 'none';
+      document.getElementById('flashcard-container').style.display = 'block';
+      flashcardIndex = 0;
+      renderFlashcard();
+    }
+  }
+
+  function renderFlashcard() {
+    if (filteredItems.length === 0) {
+      document.getElementById('fc-content').innerHTML = "<em>No questions match this filter</em>";
+      document.getElementById('fc-counter').textContent = "0 / 0";
+      return;
+    }
+    const item = filteredItems[flashcardIndex];
+    document.getElementById('fc-badge').textContent = `${item.category} (Q${item.id})`;
+    document.getElementById('fc-counter').textContent = `${flashcardIndex + 1} / ${filteredItems.length}`;
+    
+    flashcardFlipped = false;
+    document.getElementById('fc-content').innerHTML = `<strong>${item.question}</strong>`;
+    document.getElementById('fc-hint').textContent = "Click card or press Space to reveal answer";
+    document.getElementById('fc-card').style.borderColor = "var(--card-border)";
+  }
+
+  function flipCard() {
+    if (filteredItems.length === 0) return;
+    const item = filteredItems[flashcardIndex];
+    flashcardFlipped = !flashcardFlipped;
+    if (flashcardFlipped) {
+      document.getElementById('fc-content').innerHTML = `<div style="text-align: left; font-size: 1.05rem;">${item.answer}</div>`;
+      document.getElementById('fc-hint').textContent = "Click card to see question";
+      document.getElementById('fc-card').style.borderColor = "#10b981";
+    } else {
+      document.getElementById('fc-content').innerHTML = `<strong>${item.question}</strong>`;
+      document.getElementById('fc-hint').textContent = "Click card to reveal answer";
+      document.getElementById('fc-card').style.borderColor = "var(--card-border)";
+    }
+  }
+
+  function nextCard() {
+    if (flashcardIndex < filteredItems.length - 1) {
+      flashcardIndex++;
+      renderFlashcard();
+    }
+  }
+
+  function prevCard() {
+    if (flashcardIndex > 0) {
+      flashcardIndex--;
+      renderFlashcard();
+    }
+  }
+
+  // Keyboard navigation for flashcards
+  document.addEventListener('keydown', (e) => {
+    if (currentView === 'card') {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        flipCard();
+      } else if (e.code === 'ArrowRight') {
+        nextCard();
+      } else if (e.code === 'ArrowLeft') {
+        prevCard();
+      }
+    }
+  });
+
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    filterData();
+  });
+
+  // Initial load
+  updateMasteredUI();
+  filterData();
+</script>
+
+</body>
+</html>
