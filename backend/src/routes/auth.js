@@ -18,7 +18,7 @@ const signTokens = (userId) => ({
 // ─── POST /api/auth/register/ ─────────────────────────────────────────────────
 router.post('/register/', async (req, res, next) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, full_name, fullName } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ detail: 'Email and password are required.' });
@@ -32,10 +32,24 @@ router.post('/register/', async (req, res, next) => {
       return res.status(409).json({ detail: 'A user with this email already exists.' });
     }
 
-    const user = await User.create({ email, password, firstName, lastName });
+    let fName = firstName;
+    let lName = lastName;
+    const providedFullName = full_name || fullName;
+    if (providedFullName && !firstName) {
+      const parts = providedFullName.trim().split(' ');
+      fName = parts[0];
+      lName = parts.slice(1).join(' ');
+    }
+
+    const user = await User.create({ email, password, firstName: fName, lastName: lName });
     const tokens = signTokens(user._id);
 
-    res.status(201).json({ user: user.toPublicJSON(), tokens });
+    res.status(201).json({
+      access: tokens.access,
+      refresh: tokens.refresh,
+      tokens,
+      user: user.toPublicJSON(),
+    });
   } catch (err) {
     next(err);
   }
@@ -61,7 +75,12 @@ router.post('/login/', async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     const tokens = signTokens(user._id);
-    res.json({ user: user.toPublicJSON(), tokens });
+    res.json({
+      access: tokens.access,
+      refresh: tokens.refresh,
+      tokens,
+      user: user.toPublicJSON(),
+    });
   } catch (err) {
     next(err);
   }

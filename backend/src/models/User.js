@@ -68,12 +68,18 @@ userSchema.methods.verifyPassword = async function (candidate) {
 
 // ─── Instance method: safe public representation ─────────────────────────────
 userSchema.methods.toPublicJSON = function () {
+  const fullName = [this.firstName, this.lastName].filter(Boolean).join(' ') || this.email.split('@')[0];
   return {
     id: this._id,
     email: this.email,
     firstName: this.firstName || '',
     lastName: this.lastName || '',
+    first_name: this.firstName || '',
+    last_name: this.lastName || '',
+    full_name: fullName,
+    fullName: fullName,
     isActive: this.isActive,
+    is_active: this.isActive,
     createdAt: this.createdAt,
     lastLogin: this.lastLogin,
   };
