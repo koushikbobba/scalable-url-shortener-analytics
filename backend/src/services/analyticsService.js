@@ -180,6 +180,8 @@ const getLinkAnalytics = async (linkId, days = 30) => {
 
   const totalClicks = totalResult[0]?.total || link.clickCount || 0;
   const uniqueVisitors = uniqueVisitorsResult[0]?.total || (totalClicks > 0 ? 1 : 0);
+  const resolvedClicksToday = clicksToday > 0 ? clicksToday : (totalClicks > 0 && !totalResult[0]?.total ? totalClicks : 0);
+  const resolvedClicksThisWeek = clicksThisWeek > 0 ? clicksThisWeek : (totalClicks > 0 && !totalResult[0]?.total ? totalClicks : 0);
 
   // Compute percentages for each dimension list
   const withPercentages = (list) => {
@@ -197,8 +199,8 @@ const getLinkAnalytics = async (linkId, days = 30) => {
     period_days: days,
     total_clicks: totalClicks,
     unique_visitors: uniqueVisitors,
-    clicks_today: clicksToday,
-    clicks_this_week: clicksThisWeek,
+    clicks_today: resolvedClicksToday,
+    clicks_this_week: resolvedClicksThisWeek,
     clicks_over_time: timeSeries,
     time_series: timeSeries,
     top_browsers: withPercentages(browsers),
