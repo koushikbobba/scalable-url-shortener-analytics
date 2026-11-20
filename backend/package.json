@@ -6,8 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --forceExit --detectOpenHandles",
-    "test:coverage": "jest --coverage --forceExit --detectOpenHandles"
+    "test": "node node_modules/jest/bin/jest.js --forceExit --detectOpenHandles",
+    "test:unit": "node node_modules/jest/bin/jest.js src/tests/base62.test.js src/tests/helpers.test.js src/tests/rateLimiter.test.js",
+    "test:coverage": "node node_modules/jest/bin/jest.js --coverage --forceExit --detectOpenHandles"
   },
   "keywords": ["url-shortener", "analytics", "mern", "express", "mongodb"],
   "author": "LinkStream",

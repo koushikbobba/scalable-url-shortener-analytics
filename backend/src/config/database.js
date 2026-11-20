@@ -2,16 +2,19 @@ const mongoose = require('mongoose');
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/linkstream';
 
-const connectDB = async (retries = 5, delay = 3000) => {
+const connectDB = async (retries = process.env.NODE_ENV === 'test' ? 1 : 5, delay = 1000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 2000,
         socketTimeoutMS: 45000,
       });
       console.log(`[MongoDB] Connected to ${MONGODB_URI}`);
       return;
     } catch (err) {
+      if (process.env.NODE_ENV === 'test') {
+        throw err;
+      }
       console.error(`[MongoDB] Connection attempt ${attempt}/${retries} failed: ${err.message}`);
       if (attempt < retries) {
         console.log(`[MongoDB] Retrying in ${delay / 1000}s...`);
