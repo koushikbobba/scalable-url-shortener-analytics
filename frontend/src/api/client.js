@@ -220,35 +220,55 @@ const handleMockRequest = (config) => {
 
   // 8. Analytics: Link Detail
   if (cleanUrl.includes('/analytics/')) {
+    const linkId = cleanUrl.replace('/analytics/', '').replace('/', '');
     const links = JSON.parse(localStorage.getItem('demo_links') || '[]');
-    const targetLink = links[0] || {};
+    const targetLink = links.find((l) => l.id === linkId) || links[0] || {};
+    const totalClicks = targetLink.click_count || 142;
     const dates = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      dates.push({ date: d, clicks: Math.floor(Math.random() * 15) + 2 });
+      const dayClicks = Math.max(1, Math.round(totalClicks / 7 + (Math.random() * 4 - 2)));
+      dates.push({
+        date: d,
+        timestamp: d,
+        clicks: dayClicks,
+        unique_visitors: Math.max(1, Math.round(dayClicks * 0.8)),
+      });
     }
     return Promise.resolve({
       data: {
+        short_code: targetLink.short_code || 'link',
+        original_url: targetLink.original_url || 'https://example.com',
         link: targetLink,
         period_days: 7,
-        total_clicks: targetLink.click_count || 142,
+        total_clicks: totalClicks,
+        unique_visitors: Math.max(1, Math.round(totalClicks * 0.82)),
+        clicks_today: Math.round(totalClicks * 0.35),
+        clicks_this_week: totalClicks,
+        clicks_over_time: dates,
         time_series: dates,
         top_browsers: [
-          { label: 'Chrome', count: 85 },
-          { label: 'Mobile Safari', count: 32 },
-          { label: 'Firefox', count: 15 },
-          { label: 'Edge', count: 10 },
+          { name: 'Chrome', label: 'Chrome', count: Math.round(totalClicks * 0.55), percentage: 55 },
+          { name: 'Mobile Safari', label: 'Mobile Safari', count: Math.round(totalClicks * 0.25), percentage: 25 },
+          { name: 'Firefox', label: 'Firefox', count: Math.round(totalClicks * 0.12), percentage: 12 },
+          { name: 'Edge', label: 'Edge', count: Math.round(totalClicks * 0.08), percentage: 8 },
         ],
         top_devices: [
-          { label: 'desktop', count: 95 },
-          { label: 'mobile', count: 42 },
-          { label: 'tablet', count: 5 },
+          { name: 'Desktop', label: 'Desktop', count: Math.round(totalClicks * 0.60), percentage: 60 },
+          { name: 'Mobile', label: 'Mobile', count: Math.round(totalClicks * 0.35), percentage: 35 },
+          { name: 'Tablet', label: 'Tablet', count: Math.round(totalClicks * 0.05), percentage: 5 },
         ],
         top_countries: [
-          { label: 'US', count: 68 },
-          { label: 'India', count: 45 },
-          { label: 'UK', count: 18 },
-          { label: 'Germany', count: 11 },
+          { name: 'United States', label: 'United States', count: Math.round(totalClicks * 0.45), percentage: 45 },
+          { name: 'India', label: 'India', count: Math.round(totalClicks * 0.30), percentage: 30 },
+          { name: 'United Kingdom', label: 'United Kingdom', count: Math.round(totalClicks * 0.15), percentage: 15 },
+          { name: 'Germany', label: 'Germany', count: Math.round(totalClicks * 0.10), percentage: 10 },
+        ],
+        top_referrers: [
+          { name: 'Direct / None', label: 'Direct / None', count: Math.round(totalClicks * 0.50), percentage: 50 },
+          { name: 'Google Search', label: 'Google Search', count: Math.round(totalClicks * 0.30), percentage: 30 },
+          { name: 'Twitter / X', label: 'Twitter / X', count: Math.round(totalClicks * 0.15), percentage: 15 },
+          { name: 'LinkedIn', label: 'LinkedIn', count: Math.round(totalClicks * 0.05), percentage: 5 },
         ],
       },
       status: 200,

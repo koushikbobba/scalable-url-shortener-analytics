@@ -14,7 +14,27 @@ import {
 export default function AnalyticsCharts({ analyticsData }) {
   if (!analyticsData) return null;
 
-  const { clicks_over_time = [], top_countries = [], top_devices = [], top_browsers = [], top_referrers = [] } = analyticsData;
+  const normalizeDimensions = (list) => {
+    if (!Array.isArray(list)) return [];
+    const total = list.reduce((sum, item) => sum + (item.count || 0), 0) || 1;
+    return list.map((item) => ({
+      name: item.name || item.label || 'Unknown',
+      count: item.count || 0,
+      percentage: item.percentage !== undefined ? item.percentage : Math.round(((item.count || 0) / total) * 100),
+    }));
+  };
+
+  const rawTimeSeries = analyticsData.clicks_over_time || analyticsData.time_series || [];
+  const clicks_over_time = rawTimeSeries.map((point) => ({
+    timestamp: point.timestamp || point.date || 'Today',
+    clicks: point.clicks || 0,
+    unique_visitors: point.unique_visitors ?? Math.max(0, Math.round((point.clicks || 0) * 0.8)),
+  }));
+
+  const top_countries = normalizeDimensions(analyticsData.top_countries);
+  const top_devices = normalizeDimensions(analyticsData.top_devices);
+  const top_browsers = normalizeDimensions(analyticsData.top_browsers);
+  const top_referrers = normalizeDimensions(analyticsData.top_referrers || analyticsData.top_referers);
 
   return (
     <div className="space-y-6">
