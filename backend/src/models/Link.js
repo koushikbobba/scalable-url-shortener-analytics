@@ -93,9 +93,7 @@ linkSchema.set('toJSON', {
 });
 
 // ─── Indexes ─────────────────────────────────────────────────────────────────
-linkSchema.index({ shortCode: 1 }, { unique: true });
 linkSchema.index({ owner: 1, createdAt: -1 });
-linkSchema.index({ customAlias: 1 }, { sparse: true });
 linkSchema.index({ expiresAt: 1 }, { sparse: true });
 
 const Link = mongoose.model('Link', linkSchema);

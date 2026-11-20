@@ -34,7 +34,6 @@ const clickEventSchema = new mongoose.Schema(
     clickedAt: {
       type: Date,
       default: Date.now,
-      index: true,
     },
   },
   {

@@ -79,8 +79,5 @@ userSchema.methods.toPublicJSON = function () {
   };
 };
 
-// ─── Indexes ─────────────────────────────────────────────────────────────────
-userSchema.index({ email: 1 }, { unique: true });
-
 const User = mongoose.model('User', userSchema);
 module.exports = User;
