@@ -22,10 +22,19 @@ export default function CreateLinkModal({ isOpen, onClose, onLinkCreated }) {
 
     setLoading(true);
     try {
+      let expiryIso = null;
+      if (expiresAt) {
+        // Set expiry to end of selected day (23:59:59 local time)
+        const d = new Date(expiresAt + 'T23:59:59');
+        if (!isNaN(d.getTime())) {
+          expiryIso = d.toISOString();
+        }
+      }
+
       const payload = {
         original_url: originalUrl.trim(),
         custom_alias: customAlias.trim() || undefined,
-        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        expires_at: expiryIso,
       };
 
       const newLink = await linksApi.createLink(payload);
@@ -126,18 +135,30 @@ export default function CreateLinkModal({ isOpen, onClose, onLinkCreated }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Expiration Date <span className="text-slate-500">(Optional)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Expiration Date <span className="text-slate-500">(Optional)</span>
+              </label>
+              {expiresAt && (
+                <button
+                  type="button"
+                  onClick={() => setExpiresAt('')}
+                  className="text-[11px] text-sky-400 hover:text-sky-300 transition"
+                >
+                  ✕ Clear date
+                </button>
+              )}
+            </div>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <Calendar className="w-4 h-4" />
               </div>
               <input
-                type="datetime-local"
+                type="date"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition"
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 transition [color-scheme:dark]"
               />
             </div>
           </div>
