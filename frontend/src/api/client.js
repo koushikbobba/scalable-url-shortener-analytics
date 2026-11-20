@@ -161,6 +161,27 @@ const handleMockRequest = (config) => {
     return Promise.resolve({ data: newLink, status: 201 });
   }
 
+  // 5b. Links: Update (PATCH - Enable/Disable toggle)
+  if (cleanUrl.startsWith('/links/') && method.toLowerCase() === 'patch') {
+    const linkId = cleanUrl.replace('/links/', '').replace('/', '');
+    let links = JSON.parse(localStorage.getItem('demo_links') || '[]');
+    let updatedLink = null;
+    links = links.map((l) => {
+      if (l.id === linkId) {
+        updatedLink = {
+          ...l,
+          ...parsedData,
+          is_active: parsedData.is_active !== undefined ? parsedData.is_active : l.is_active,
+          updated_at: new Date().toISOString(),
+        };
+        return updatedLink;
+      }
+      return l;
+    });
+    localStorage.setItem('demo_links', JSON.stringify(links));
+    return Promise.resolve({ data: updatedLink, status: 200 });
+  }
+
   // 6. Links: Delete
   if (cleanUrl.startsWith('/links/') && method.toLowerCase() === 'delete') {
     const linkId = cleanUrl.replace('/links/', '').replace('/', '');

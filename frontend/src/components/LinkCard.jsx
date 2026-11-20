@@ -7,7 +7,13 @@ export default function LinkCard({ link, onLinkDeleted, onLinkUpdated }) {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const fullShortUrl = link.short_url || `http://localhost:8000/${link.short_code}`;
+  const getFullShortUrl = () => {
+    if (typeof window !== 'undefined' && window.location.hostname.includes('github.io')) {
+      return `${window.location.origin}${window.location.pathname}#/${link.short_code}`;
+    }
+    return link.short_url || `${window.location.origin}/#/${link.short_code}`;
+  };
+  const fullShortUrl = getFullShortUrl();
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullShortUrl);

@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import RedirectPage from './pages/RedirectPage';
 import { authApi } from './api/auth';
 
 function ProtectedRoute({ user, children }) {
@@ -103,6 +104,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Short URL public redirection handler */}
+          <Route path="/:shortCode" element={<RedirectPage />} />
         </Routes>
       </div>
     </BrowserRouter>
