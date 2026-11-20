@@ -1,26 +1,27 @@
-# LinkStream — Scalable URL Shortener & Real-Time Link Analytics Platform
+# LinkStream — Scalable URL Shortener & Link Analytics Platform (MERN Stack)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-5.0-green.svg)](https://www.djangoproject.com/)
-[![Kafka](https://img.shields.io/badge/Kafka-3.7-black.svg)](https://kafka.apache.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.19-black.svg)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-brightgreen.svg)](https://www.mongodb.com/)
 [![Redis](https://img.shields.io/badge/Redis-7.2-red.svg)](https://redis.io/)
 [![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
 
-**LinkStream** is a production-grade, high-performance URL shortener and event-driven click stream analytics platform designed to demonstrate distributed systems engineering, caching patterns, asynchronous stream processing, distributed rate limiting, and full-stack observability.
+**LinkStream** is a production-grade, high-performance URL shortener and real-time click stream analytics platform built on the **MERN stack** (MongoDB, Express, React, Node.js) with **Redis caching & rate limiting**, **Prometheus observability**, and automated **cron jobs**.
 
 ---
 
 ## 🚀 Key Features
 
-* **Sub-10ms Short URL Redirection**: High-speed `GET /{short_code}` redirect engine powered by **Redis Cache-Aside** read caching.
+* **Sub-10ms Short URL Redirection**: High-speed `GET /{short_code}` redirect engine powered by **Redis Cache-Aside** read caching (with negative 404 caching to protect the database).
 * **Base62 Short Code Generation**: Collision-safe encoding algorithm ($62^7 \approx 3.52 \text{ Trillion}$ combinations) with custom alias support and reserved keyword validation.
-* **Asynchronous Click Telemetry Pipeline**: Non-blocking **Apache Kafka producer** dispatches click events to a `link-clicks` topic without delaying redirect HTTP responses.
-* **GDPR-Compliant Analytics Engine**: Real-time consumer worker ingests events in micro-batches (500 records/batch), extracting anonymized IP hashes, GeoIP location, browser, device, OS, and referrer headers.
-* **Distributed Rate Limiting**: Redis-backed **Sliding Window Rate Limiter** protecting public redirect endpoints and link creation APIs.
+* **Non-Blocking Click Telemetry Pipeline**: Asynchronously ingests click events using Node.js event-loop workers without delaying redirect HTTP 302 responses.
+* **GDPR-Compliant Analytics Engine**: Anonymized IP SHA-256 hashing, User-Agent device/browser/OS parsing, referrer tracking, and multi-dimensional MongoDB aggregation pipelines.
+* **Distributed Rate Limiting**: Redis-backed **Sliding Window Rate Limiter** protecting public redirect endpoints (30 req/min), authenticated endpoints (60 req/min), and link creation APIs (20 links/min).
 * **Interactive React Dashboard**: Modern UI built with React 18, Vite, Tailwind CSS, Lucide icons, and Recharts graph visualizations.
-* **Full-Stack Observability**: Embedded Prometheus exporter endpoints (`/metrics`) and pre-configured Grafana dashboards monitoring QPS, P95/P99 latency, cache hit ratios, and consumer lag.
-* **Multi-Container Docker Architecture**: Fully containerized stack powered by `docker-compose`.
+* **Full-Stack Observability**: Embedded Prometheus exporter endpoint (`/metrics`) and pre-configured Grafana dashboards monitoring QPS, P95/P99 latency, and cache hit ratios.
+* **Automated Cron Scheduling**: `node-cron` workers aggregating hourly rollups into `DailyMetrics` and weekly pruning of click records past the 90-day retention window.
+* **Multi-Container Docker Architecture**: Containerized stack powered by `docker-compose`.
 
 ---
 
@@ -32,119 +33,109 @@
                     └──────┬───────┘
                            │
                     ┌──────▼───────┐
-                    │ Nginx Proxy  │
+                    │  React UI    │ (Port 3000 / Vite)
                     └──────┬───────┘
                            │
                     ┌──────▼───────┐
-                    │    Django    │
-                    │  REST API    │
+                    │  Express.js  │ (Port 5000)
+                    │  Node.js API │
                     └───┬──────┬───┘
                         │      │
               ┌─────────▼─┐  ┌─▼─────────┐
-              │   Redis   │  │ PostgreSQL│
-              │   Cache   │  │ (OLTP DB) │
+              │   Redis   │  │  MongoDB  │
+              │Cache & RL │  │ (Cluster) │
               └─────┬─────┘  └───────────┘
                     │
-              ┌─────▼─────┐
-              │   Kafka   │ (Topic: link-clicks)
-              └─────┬─────┘
-                    │
             ┌───────▼────────┐
-            │ Analytics      │
-            │ Consumer Worker│
-            └───────┬────────┘
-                    │
-              ┌─────▼──────┐
-              │ PostgreSQL │
-              │ Analytics  │
-              └────────────┘
+            │ node-cron Jobs │
+            │ (Rollup/Prune) │
+            └────────────────┘
 ```
 
 ---
 
-## 📦 Technology Stack
+## 📂 Project Structure
 
-* **Backend**: Python 3.11, Django 5.0, Django REST Framework, SimpleJWT
-* **Database**: PostgreSQL 16
-* **Cache**: Redis 7.2 (Cache-Aside & Sliding Window Rate Limiter)
-* **Message Broker**: Apache Kafka 3.7 (KRaft mode)
-* **Task Queue & Scheduler**: Celery 5.3 & Celery Beat
-* **Frontend**: React 18, Vite, Tailwind CSS, Recharts, Lucide React
-* **Observability**: Prometheus, Grafana
-* **Load Testing**: Locust
-* **Testing**: Pytest, pytest-django
+```
+├── backend/                  # Node.js + Express + MongoDB Backend
+│   ├── src/
+│   │   ├── config/           # Database (Mongoose) & Redis connections
+│   │   ├── middleware/       # JWT Auth, Sliding-Window Rate Limiter, Prometheus
+│   │   ├── models/           # User, Link, ClickEvent, DailyMetrics
+│   │   ├── routes/           # Auth, Links, Analytics, Redirect, Health
+│   │   ├── scheduler/        # node-cron recurring tasks
+│   │   ├── services/         # LinkService, AnalyticsService
+│   │   ├── utils/            # Base62 encoder, IP hashing, User-Agent parser
+│   │   └── server.js         # Main Express entry point
+│   ├── tests/                # Jest + Supertest integration tests
+│   ├── Dockerfile
+│   └── package.json
+├── frontend/                 # React 18 + Vite + Tailwind CSS Dashboard
+│   ├── src/
+│   │   ├── api/              # Axios client (configured to backend port 5000)
+│   │   ├── components/       # UI components, modals, charts
+│   │   └── pages/            # Dashboard, Link details, Auth pages
+│   └── vite.config.js
+├── monitoring/               # Prometheus & Grafana configurations
+│   ├── prometheus/
+│   └── grafana/
+└── docker-compose.yml        # Orchestration for MongoDB, Redis, Backend, Frontend
+```
 
 ---
 
-## ⚡ Quick Start with Docker
+## ⚡ Quick Start (Local Development)
 
-### Prerequisites
-* Docker Desktop 24+ & Docker Compose v2+
+### 1. Prerequisites
+- **Node.js** ≥ 18
+- **MongoDB** (running on `mongodb://127.0.0.1:27017` or MongoDB Atlas)
+- **Redis** (running on `redis://127.0.0.1:6379`, optional — automatically degrades to memory fallback)
 
-### 1. Clone repository & initialize environment
-```bash
-git clone https://github.com/your-username/scalable-url-shortener.git
-cd scalable-url-shortener
-cp .env.example .env
-```
-
-### 2. Launch complete multi-container stack
-```bash
-docker compose up --build -d
-```
-
-### 3. Verify running services
-* **React Dashboard**: [http://localhost:3000](http://localhost:3000)
-* **Django REST API**: [http://localhost:8000](http://localhost:8000)
-* **Swagger API Docs**: [http://localhost:8000/api/docs/](http://localhost:8000/api/docs/)
-* **Prometheus Metrics**: [http://localhost:9090](http://localhost:9090)
-* **Grafana Dashboard**: [http://localhost:3001](http://localhost:3001) *(Credentials: `admin` / `admin`)*
-
----
-
-## 🧪 Automated Testing & Load Testing
-
-### Run Pytest Suite
-```bash
-docker compose exec backend pytest
-```
-
-### Run Locust Load Tests
+### 2. Start the Backend
 ```bash
 cd backend
-locust -f locustfile.py --host=http://localhost:8000
+npm install
+npm run dev
 ```
-Open [http://localhost:8089](http://localhost:8089) in your browser to trigger load test scenarios (Redirects, Creations, Analytics queries).
+*Backend runs on: `http://127.0.0.1:5000`*
+
+### 3. Start the Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+*Frontend runs on: `http://127.0.0.1:3000`*
 
 ---
 
-## 📖 API Documentation Summary
+## 🐳 Docker Deployment
 
-| Method | Endpoint | Auth | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register/` | Public | Register new user account |
-| `POST` | `/api/auth/login/` | Public | Login and receive JWT access/refresh tokens |
-| `GET` | `/{short_code}` | Public | Redirect to destination URL via 302 Found |
-| `POST` | `/api/links/` | Bearer | Create shortened URL or custom alias |
-| `GET` | `/api/links/` | Bearer | List, search, filter, and sort user's links |
-| `PATCH` | `/api/links/{id}/` | Bearer | Toggle link active status or update expiration |
-| `DELETE`| `/api/links/{id}/` | Bearer | Delete link and invalidate Redis cache |
-| `GET` | `/api/analytics/{id}/`| Bearer | Fetch link click analytics (time-series & geo) |
+To spin up the entire cluster with a single command:
 
----
+```bash
+docker-compose up --build -d
+```
 
-## 🛠 Engineering Challenges & Tradeoffs
-
-1. **High-Volume Redirect Decoupling**: Solved by offloading click analytics writes from the HTTP response thread to Apache Kafka asynchronously, guaranteeing sub-10ms redirect response times.
-2. **Cache Stampede Prevention**: Implemented distributed Redis mutex locks (`SET NX`) and probabilistic early expiration (XFetch) to prevent 10,000 concurrent requests from slamming PostgreSQL on cache misses.
-3. **At-Least-Once Kafka Delivery**: Deduplicated click event batches in the consumer worker via unique signature constraints and atomic SQL upserts.
-4. **Resilient Rate Limiting**: Designed a Redis ZSET sliding-window rate limiter that fails open gracefully if Redis is temporarily unreachable.
-5. **GDPR Anonymization**: Hashed IP addresses with a secret salt before disk persistence while preserving unique visitor calculation accuracy.
+| Service | Port | Description |
+|---|---|---|
+| **Frontend** | `3000` | React Dashboard UI |
+| **Backend** | `5000` | Express REST API |
+| **MongoDB** | `27017` | Document Database |
+| **Redis** | `6379` | In-Memory Cache & Limiter |
+| **Prometheus** | `9090` | Metrics Scraper |
+| **Grafana** | `3001` | Observability Dashboards |
 
 ---
 
-## 📚 Documentation Links
-* [System Design & Scaling Guide](docs/SYSTEM_DESIGN.md)
-* [SDE Interview Prep & 20 Q&A](docs/INTERVIEW_PREP.md)
-* [Resume Bullet Points](docs/RESUME_BULLETS.md)
-* [Implementation Plan](docs/implementation_plan.md)
+## 🧪 Testing
+
+```bash
+cd backend
+npm test
+```
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.

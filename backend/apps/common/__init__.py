@@ -1,1 +1,0 @@
-# Apps common package

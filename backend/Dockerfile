@@ -1,27 +1,17 @@
-FROM python:3.11-slim
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    curl \
-    netcat-traditional \
-    && rm -rf /var/lib/apt/lists/*
+# Install dependencies first for layer caching
+COPY package*.json ./
+RUN npm ci --only=production
 
-# Install python dependencies
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy source code
+COPY . .
 
-COPY . /app/
+EXPOSE 5000
 
-RUN chmod +x /app/entrypoint.sh
+ENV NODE_ENV=production
+ENV PORT=5000
 
-EXPOSE 8000
-
-ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "--worker-class", "gthread", "config.wsgi:application"]
+CMD ["node", "src/server.js"]
