@@ -85,6 +85,8 @@ class LinkService:
             if cached_data:
                 if isinstance(cached_data, str):
                     cached_data = json.loads(cached_data)
+                if cached_data.get("not_found"):
+                    return None
                 cached_data["from_cache"] = True
                 return cached_data
         except Exception as e:

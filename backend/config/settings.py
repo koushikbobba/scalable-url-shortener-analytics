@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY') or 'django-insecure-prod-scalable-url-short
 
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1')
 
-ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,backend').split(',') if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,backend,testserver').split(',') if h.strip()]
 
 
 INSTALLED_APPS = [
