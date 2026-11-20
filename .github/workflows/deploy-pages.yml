@@ -1,0 +1,44 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Pages Directory
+        run: |
+          mkdir -p _site
+          cp viva_interview_dashboard.html _site/index.html
+          cp LinkStream_MERN_Architecture_and_Learning_Guide.pdf _site/
+          if [ -f "LinkStream_Project_Explanation_and_200_Viva_Questions.pdf" ]; then
+            cp LinkStream_Project_Explanation_and_200_Viva_Questions.pdf _site/
+          fi
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
