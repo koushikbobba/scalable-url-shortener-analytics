@@ -9,7 +9,8 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        // MERN backend on 5000 | Django backend on 8000
+        target: 'http://127.0.0.1:5000',
         changeOrigin: true,
       },
     },
