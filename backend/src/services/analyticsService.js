@@ -119,14 +119,21 @@ const getLinkAnalytics = async (linkId, days = 30) => {
     { $match: { link: linkId, clickedAt: { $gte: since } } },
     {
       $group: {
-        _id: {
-          $dateToString: { format: '%Y-%m-%d', date: '$clickedAt' },
-        },
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$clickedAt' } },
         clicks: { $sum: 1 },
+        unique_visitors: { $addToSet: '$ipHash' },
       },
     },
     { $sort: { _id: 1 } },
-    { $project: { date: '$_id', clicks: 1, _id: 0 } },
+    {
+      $project: {
+        date: '$_id',
+        timestamp: '$_id',
+        clicks: 1,
+        unique_visitors: { $size: '$unique_visitors' },
+        _id: 0,
+      },
+    },
   ]);
 
   // Dimension aggregations
@@ -135,10 +142,24 @@ const getLinkAnalytics = async (linkId, days = 30) => {
     { $group: { _id: `$${field}`, count: { $sum: 1 } } },
     { $sort: { count: -1 } },
     { $limit: 10 },
-    { $project: { label: '$_id', count: 1, _id: 0 } },
+    { $project: { name: '$_id', label: '$_id', count: 1, _id: 0 } },
   ];
 
-  const [browsers, devices, countries, operatingSystems, referers, totalResult] = await Promise.all([
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const weekStart = new Date(Date.now() - 7 * 86400000);
+
+  const [
+    browsers,
+    devices,
+    countries,
+    operatingSystems,
+    referers,
+    totalResult,
+    uniqueVisitorsResult,
+    clicksToday,
+    clicksThisWeek,
+  ] = await Promise.all([
     ClickEvent.aggregate(dimensionPipeline('browser')),
     ClickEvent.aggregate(dimensionPipeline('device')),
     ClickEvent.aggregate(dimensionPipeline('country')),
@@ -148,20 +169,44 @@ const getLinkAnalytics = async (linkId, days = 30) => {
       { $match: { link: linkId, clickedAt: { $gte: since } } },
       { $count: 'total' },
     ]),
+    ClickEvent.aggregate([
+      { $match: { link: linkId, clickedAt: { $gte: since } } },
+      { $group: { _id: '$ipHash' } },
+      { $count: 'total' },
+    ]),
+    ClickEvent.countDocuments({ link: linkId, clickedAt: { $gte: todayStart } }),
+    ClickEvent.countDocuments({ link: linkId, clickedAt: { $gte: weekStart } }),
   ]);
 
-  const totalClicks = totalResult[0]?.total || 0;
+  const totalClicks = totalResult[0]?.total || link.clickCount || 0;
+  const uniqueVisitors = uniqueVisitorsResult[0]?.total || (totalClicks > 0 ? 1 : 0);
+
+  // Compute percentages for each dimension list
+  const withPercentages = (list) => {
+    const sum = list.reduce((s, item) => s + item.count, 0) || 1;
+    return list.map((item) => ({
+      ...item,
+      percentage: Math.round((item.count / sum) * 100),
+    }));
+  };
 
   return {
+    short_code: link.shortCode,
+    original_url: link.originalUrl,
     link: link.toJSON(),
     period_days: days,
     total_clicks: totalClicks,
+    unique_visitors: uniqueVisitors,
+    clicks_today: clicksToday,
+    clicks_this_week: clicksThisWeek,
+    clicks_over_time: timeSeries,
     time_series: timeSeries,
-    top_browsers: browsers,
-    top_devices: devices,
-    top_countries: countries,
-    top_os: operatingSystems,
-    top_referers: referers,
+    top_browsers: withPercentages(browsers),
+    top_devices: withPercentages(devices),
+    top_countries: withPercentages(countries),
+    top_os: withPercentages(operatingSystems),
+    top_referrers: withPercentages(referers),
+    top_referers: withPercentages(referers),
   };
 };
 

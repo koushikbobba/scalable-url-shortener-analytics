@@ -220,21 +220,29 @@ const handleMockRequest = (config) => {
 
   // 8. Analytics: Link Detail
   if (cleanUrl.includes('/analytics/')) {
-    const linkId = cleanUrl.replace('/analytics/', '').replace('/', '');
+    const urlPath = cleanUrl.split('?')[0];
+    const linkId = urlPath.replace('/analytics/', '').replace(/\/$/, '');
     const links = JSON.parse(localStorage.getItem('demo_links') || '[]');
     const targetLink = links.find((l) => l.id === linkId) || links[0] || {};
-    const totalClicks = targetLink.click_count || 142;
+    const totalClicks = targetLink.click_count || 3;
+    const uniqueVisitors = Math.max(1, Math.min(totalClicks, Math.round(totalClicks * 0.85) || 1));
+    const clicksToday = totalClicks;
+    const clicksThisWeek = totalClicks;
+
     const dates = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      const dayClicks = Math.max(1, Math.round(totalClicks / 7 + (Math.random() * 4 - 2)));
+      const isToday = i === 0;
+      const dayClicks = isToday ? totalClicks : Math.max(0, Math.floor(Math.random() * 2));
+      const dayUV = isToday ? uniqueVisitors : Math.max(0, Math.floor(dayClicks * 0.8));
       dates.push({
         date: d,
         timestamp: d,
         clicks: dayClicks,
-        unique_visitors: Math.max(1, Math.round(dayClicks * 0.8)),
+        unique_visitors: dayUV,
       });
     }
+
     return Promise.resolve({
       data: {
         short_code: targetLink.short_code || 'link',
@@ -242,33 +250,25 @@ const handleMockRequest = (config) => {
         link: targetLink,
         period_days: 7,
         total_clicks: totalClicks,
-        unique_visitors: Math.max(1, Math.round(totalClicks * 0.82)),
-        clicks_today: Math.round(totalClicks * 0.35),
-        clicks_this_week: totalClicks,
+        unique_visitors: uniqueVisitors,
+        clicks_today: clicksToday,
+        clicks_this_week: clicksThisWeek,
         clicks_over_time: dates,
         time_series: dates,
         top_browsers: [
-          { name: 'Chrome', label: 'Chrome', count: Math.round(totalClicks * 0.55), percentage: 55 },
-          { name: 'Mobile Safari', label: 'Mobile Safari', count: Math.round(totalClicks * 0.25), percentage: 25 },
-          { name: 'Firefox', label: 'Firefox', count: Math.round(totalClicks * 0.12), percentage: 12 },
-          { name: 'Edge', label: 'Edge', count: Math.round(totalClicks * 0.08), percentage: 8 },
+          { name: 'Chrome', label: 'Chrome', count: totalClicks, percentage: 100 },
+          { name: 'Mobile Safari', label: 'Mobile Safari', count: 0, percentage: 0 },
         ],
         top_devices: [
-          { name: 'Desktop', label: 'Desktop', count: Math.round(totalClicks * 0.60), percentage: 60 },
-          { name: 'Mobile', label: 'Mobile', count: Math.round(totalClicks * 0.35), percentage: 35 },
-          { name: 'Tablet', label: 'Tablet', count: Math.round(totalClicks * 0.05), percentage: 5 },
+          { name: 'Desktop', label: 'Desktop', count: totalClicks, percentage: 100 },
+          { name: 'Mobile', label: 'Mobile', count: 0, percentage: 0 },
         ],
         top_countries: [
-          { name: 'United States', label: 'United States', count: Math.round(totalClicks * 0.45), percentage: 45 },
-          { name: 'India', label: 'India', count: Math.round(totalClicks * 0.30), percentage: 30 },
-          { name: 'United Kingdom', label: 'United Kingdom', count: Math.round(totalClicks * 0.15), percentage: 15 },
-          { name: 'Germany', label: 'Germany', count: Math.round(totalClicks * 0.10), percentage: 10 },
+          { name: 'India', label: 'India', count: totalClicks, percentage: 100 },
+          { name: 'United States', label: 'United States', count: 0, percentage: 0 },
         ],
         top_referrers: [
-          { name: 'Direct / None', label: 'Direct / None', count: Math.round(totalClicks * 0.50), percentage: 50 },
-          { name: 'Google Search', label: 'Google Search', count: Math.round(totalClicks * 0.30), percentage: 30 },
-          { name: 'Twitter / X', label: 'Twitter / X', count: Math.round(totalClicks * 0.15), percentage: 15 },
-          { name: 'LinkedIn', label: 'LinkedIn', count: Math.round(totalClicks * 0.05), percentage: 5 },
+          { name: 'Direct / None', label: 'Direct / None', count: totalClicks, percentage: 100 },
         ],
       },
       status: 200,
