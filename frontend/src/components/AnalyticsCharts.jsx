@@ -28,7 +28,7 @@ export default function AnalyticsCharts({ analyticsData }) {
   const clicks_over_time = rawTimeSeries.map((point) => ({
     timestamp: point.timestamp || point.date || 'Today',
     clicks: point.clicks || 0,
-    unique_visitors: point.unique_visitors ?? Math.max(0, Math.round((point.clicks || 0) * 0.8)),
+    unique_visitors: point.unique_visitors ?? (point.clicks > 0 ? 1 : 0),
   }));
 
   const top_countries = normalizeDimensions(analyticsData.top_countries);

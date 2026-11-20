@@ -24,36 +24,11 @@ api.interceptors.request.use(
 
 // ─── In-Browser Demo Store for GitHub Pages ──────────────────────────────────
 const initDemoData = () => {
-  if (!localStorage.getItem('demo_links')) {
-    const initialLinks = [
-      {
-        id: 'link-demo-1',
-        short_code: 'gh-repo',
-        short_url: 'https://koushikbobba.github.io/scalable-url-shortener-analytics/#/gh-repo',
-        original_url: 'https://github.com/koushikbobba/scalable-url-shortener-analytics',
-        custom_alias: 'gh-repo',
-        title: 'Project GitHub Repository',
-        is_active: true,
-        expires_at: null,
-        click_count: 142,
-        created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: 'link-demo-2',
-        short_code: 'docs-viva',
-        short_url: 'https://koushikbobba.github.io/scalable-url-shortener-analytics/#/docs-viva',
-        original_url: 'https://koushikbobba.github.io/scalable-url-shortener-analytics/viva.html',
-        custom_alias: 'docs-viva',
-        title: 'System Architecture & Viva Guide',
-        is_active: true,
-        expires_at: null,
-        click_count: 89,
-        created_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
-    localStorage.setItem('demo_links', JSON.stringify(initialLinks));
+  // Purge any legacy fake dummy links
+  const existing = JSON.parse(localStorage.getItem('demo_links') || '[]');
+  const cleaned = existing.filter((l) => l.id !== 'link-demo-1' && l.id !== 'link-demo-2');
+  if (cleaned.length !== existing.length) {
+    localStorage.setItem('demo_links', JSON.stringify(cleaned));
   }
 };
 
@@ -194,25 +169,53 @@ const handleMockRequest = (config) => {
   // 7. Analytics: Overview
   if (cleanUrl.includes('/analytics/overview/')) {
     const links = JSON.parse(localStorage.getItem('demo_links') || '[]');
+    const allEvents = JSON.parse(localStorage.getItem('demo_click_events') || '[]');
     const totalClicks = links.reduce((s, l) => s + (l.click_count || 0), 0);
+    
+    const now = Date.now();
+    const todayEvents = allEvents.filter((e) => now - new Date(e.timestamp).getTime() <= 24 * 3600 * 1000);
+    const clicksToday = todayEvents.length;
+    const visitorSet = new Set(allEvents.map((e) => e.visitorId).filter(Boolean));
+    const uniqueVisitors = visitorSet.size > 0 ? visitorSet.size : (totalClicks > 0 ? 1 : 0);
+
     const dates = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      dates.push({ date: d, clicks: Math.floor(Math.random() * 25) + 5 });
+      const d = new Date(now - i * 86400000).toISOString().slice(0, 10);
+      const dayEvts = allEvents.filter((e) => e.timestamp && e.timestamp.slice(0, 10) === d);
+      const dayUV = new Set(dayEvts.map((e) => e.visitorId).filter(Boolean)).size;
+      dates.push({
+        date: d,
+        timestamp: d,
+        clicks: dayEvts.length,
+        unique_visitors: dayUV,
+      });
     }
+
+    // If there were recorded clicks but no individual day events, allocate to today
+    const sumDayClicks = dates.reduce((s, d) => s + d.clicks, 0);
+    if (totalClicks > sumDayClicks) {
+      dates[dates.length - 1].clicks += (totalClicks - sumDayClicks);
+      dates[dates.length - 1].unique_visitors = uniqueVisitors;
+    }
+
     return Promise.resolve({
       data: {
         total_links: links.length,
         active_links: links.filter((l) => l.is_active).length,
-        total_clicks: totalClicks || 231,
+        total_clicks: totalClicks,
+        unique_visitors: uniqueVisitors,
+        clicks_today: clicksToday,
         period_days: 7,
         time_series: dates,
-        top_links: links.slice(0, 5).map((l) => ({
-          link_id: l.id,
-          short_code: l.short_code,
-          original_url: l.original_url,
-          clicks: l.click_count || 10,
-        })),
+        top_links: [...links]
+          .sort((a, b) => (b.click_count || 0) - (a.click_count || 0))
+          .slice(0, 5)
+          .map((l) => ({
+            link_id: l.id,
+            short_code: l.short_code,
+            original_url: l.original_url,
+            clicks: l.click_count || 0,
+          })),
       },
       status: 200,
     });
@@ -223,25 +226,91 @@ const handleMockRequest = (config) => {
     const urlPath = cleanUrl.split('?')[0];
     const linkId = urlPath.replace('/analytics/', '').replace(/\/$/, '');
     const links = JSON.parse(localStorage.getItem('demo_links') || '[]');
-    const targetLink = links.find((l) => l.id === linkId) || links[0] || {};
-    const totalClicks = targetLink.click_count || 3;
-    const uniqueVisitors = Math.max(1, Math.min(totalClicks, Math.round(totalClicks * 0.85) || 1));
-    const clicksToday = totalClicks;
-    const clicksThisWeek = totalClicks;
+    const targetLink = links.find((l) => l.id === linkId || l.short_code === linkId) || links[0] || {};
+    let allEvents = JSON.parse(localStorage.getItem('demo_click_events') || '[]');
+    let linkEvents = allEvents.filter((e) => e.linkId === targetLink.id || e.shortCode === targetLink.short_code);
+
+    let totalClicks = targetLink.click_count || 0;
+    if (linkEvents.length > totalClicks) {
+      totalClicks = linkEvents.length;
+      targetLink.click_count = totalClicks;
+      localStorage.setItem('demo_links', JSON.stringify(links));
+    }
+
+    // If the link has clicks but no individual event records, backfill with real client environment
+    if (totalClicks > 0 && linkEvents.length === 0) {
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      let browser = 'Chrome';
+      if (ua.includes('Firefox')) browser = 'Firefox';
+      else if (ua.includes('Edg')) browser = 'Edge';
+      else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+
+      let device = 'Desktop';
+      if (/mobile|android|iphone/i.test(ua)) device = 'Mobile';
+      else if (/tablet|ipad/i.test(ua)) device = 'Tablet';
+
+      const visitorId = localStorage.getItem('ls_visitor_id') || 'vis_owner';
+      const backfilledEvent = {
+        linkId: targetLink.id,
+        shortCode: targetLink.short_code,
+        timestamp: targetLink.created_at || new Date().toISOString(),
+        browser,
+        device,
+        country: 'India',
+        referrer: 'Direct / None',
+        visitorId,
+      };
+      linkEvents = [backfilledEvent];
+      allEvents.push(backfilledEvent);
+      localStorage.setItem('demo_click_events', JSON.stringify(allEvents));
+    }
+
+    const visitorSet = new Set(linkEvents.map((e) => e.visitorId).filter(Boolean));
+    const uniqueVisitors = visitorSet.size > 0 ? visitorSet.size : (totalClicks > 0 ? 1 : 0);
+
+    const now = Date.now();
+    const todayEvents = linkEvents.filter((e) => now - new Date(e.timestamp).getTime() <= 24 * 3600 * 1000);
+    const clicksToday = todayEvents.length > 0 ? todayEvents.length : totalClicks;
+
+    const weekEvents = linkEvents.filter((e) => now - new Date(e.timestamp).getTime() <= 7 * 24 * 3600 * 1000);
+    const clicksThisWeek = weekEvents.length > 0 ? weekEvents.length : totalClicks;
 
     const dates = [];
     for (let i = 6; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-      const isToday = i === 0;
-      const dayClicks = isToday ? totalClicks : Math.max(0, Math.floor(Math.random() * 2));
-      const dayUV = isToday ? uniqueVisitors : Math.max(0, Math.floor(dayClicks * 0.8));
+      const d = new Date(now - i * 86400000).toISOString().slice(0, 10);
+      const dayEvts = linkEvents.filter((e) => e.timestamp && e.timestamp.slice(0, 10) === d);
+      const dayUV = new Set(dayEvts.map((e) => e.visitorId).filter(Boolean)).size;
       dates.push({
         date: d,
         timestamp: d,
-        clicks: dayClicks,
+        clicks: dayEvts.length,
         unique_visitors: dayUV,
       });
     }
+
+    const sumDayClicks = dates.reduce((s, d) => s + d.clicks, 0);
+    if (totalClicks > sumDayClicks) {
+      dates[dates.length - 1].clicks += (totalClicks - sumDayClicks);
+      dates[dates.length - 1].unique_visitors = uniqueVisitors;
+    }
+
+    const computeDimension = (field) => {
+      if (linkEvents.length === 0) return [];
+      const counts = {};
+      linkEvents.forEach((e) => {
+        const val = e[field] || 'Unknown';
+        counts[val] = (counts[val] || 0) + 1;
+      });
+      const total = linkEvents.length;
+      return Object.entries(counts)
+        .map(([name, count]) => ({
+          name,
+          label: name,
+          count,
+          percentage: Math.round((count / total) * 100),
+        }))
+        .sort((a, b) => b.count - a.count);
+    };
 
     return Promise.resolve({
       data: {
@@ -255,21 +324,10 @@ const handleMockRequest = (config) => {
         clicks_this_week: clicksThisWeek,
         clicks_over_time: dates,
         time_series: dates,
-        top_browsers: [
-          { name: 'Chrome', label: 'Chrome', count: totalClicks, percentage: 100 },
-          { name: 'Mobile Safari', label: 'Mobile Safari', count: 0, percentage: 0 },
-        ],
-        top_devices: [
-          { name: 'Desktop', label: 'Desktop', count: totalClicks, percentage: 100 },
-          { name: 'Mobile', label: 'Mobile', count: 0, percentage: 0 },
-        ],
-        top_countries: [
-          { name: 'India', label: 'India', count: totalClicks, percentage: 100 },
-          { name: 'United States', label: 'United States', count: 0, percentage: 0 },
-        ],
-        top_referrers: [
-          { name: 'Direct / None', label: 'Direct / None', count: totalClicks, percentage: 100 },
-        ],
+        top_browsers: computeDimension('browser'),
+        top_devices: computeDimension('device'),
+        top_countries: computeDimension('country'),
+        top_referrers: computeDimension('referrer'),
       },
       status: 200,
     });

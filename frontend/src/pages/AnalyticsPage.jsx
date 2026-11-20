@@ -95,19 +95,19 @@ export default function AnalyticsPage() {
         />
         <StatCard
           title="Unique Visitors"
-          value={(analytics.unique_visitors ?? Math.max(1, Math.round((analytics.total_clicks || analytics.link?.click_count || 1) * 0.85))).toLocaleString()}
+          value={(analytics.unique_visitors ?? (analytics.total_clicks > 0 ? 1 : 0)).toLocaleString()}
           icon={Users}
           subtitle="Distinct IP signatures"
         />
         <StatCard
           title="Clicks Today"
-          value={(analytics.clicks_today ?? Math.round((analytics.total_clicks || analytics.link?.click_count || 0) * 0.4)).toLocaleString()}
+          value={(analytics.clicks_today ?? 0).toLocaleString()}
           icon={Flame}
           subtitle="Last 24 hours"
         />
         <StatCard
           title="This Week"
-          value={(analytics.clicks_this_week ?? (analytics.total_clicks || analytics.link?.click_count || 0)).toLocaleString()}
+          value={(analytics.clicks_this_week ?? (analytics.total_clicks || 0)).toLocaleString()}
           icon={TrendingUp}
           subtitle="Last 7 days"
         />

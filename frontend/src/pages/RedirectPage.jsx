@@ -55,6 +55,38 @@ export default function RedirectPage() {
         const updated = demoLinks.map((l) => (l.id === link.id ? link : l));
         localStorage.setItem('demo_links', JSON.stringify(updated));
 
+        // Record REAL telemetry event
+        let visitorId = localStorage.getItem('ls_visitor_id');
+        if (!visitorId) {
+          visitorId = 'vis_' + Math.random().toString(36).substring(2, 10);
+          localStorage.setItem('ls_visitor_id', visitorId);
+        }
+
+        const ua = navigator.userAgent;
+        let browser = 'Chrome';
+        if (ua.includes('Firefox')) browser = 'Firefox';
+        else if (ua.includes('Edg')) browser = 'Edge';
+        else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+
+        let device = 'Desktop';
+        if (/mobile|android|iphone/i.test(ua)) device = 'Mobile';
+        else if (/tablet|ipad/i.test(ua)) device = 'Tablet';
+
+        const ref = document.referrer ? new URL(document.referrer).hostname : 'Direct / None';
+
+        const clickEvents = JSON.parse(localStorage.getItem('demo_click_events') || '[]');
+        clickEvents.push({
+          linkId: link.id,
+          shortCode: link.short_code,
+          timestamp: new Date().toISOString(),
+          browser,
+          device,
+          country: 'India', // Local default
+          referrer: ref,
+          visitorId,
+        });
+        localStorage.setItem('demo_click_events', JSON.stringify(clickEvents));
+
         setTargetUrl(link.original_url);
         setLoading(false);
 
